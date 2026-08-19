@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
-import { Button, Text } from '@astryxdesign/core';
+import { DropdownMenu, IconButton, Text } from '@astryxdesign/core';
 import { Viewport } from './ui/Viewport';
 import { ControlPanel } from './ui/ControlPanel';
+import { DownloadIcon, PhotoIcon } from './ui/icons';
 import { Pipeline } from './render/Pipeline';
 import {
   ACCEPTED_TYPES,
@@ -104,27 +105,32 @@ export default function App() {
               e.target.value = '';
             }}
           />
-          <Button
+          <IconButton
             label="Open photo"
+            icon={<PhotoIcon />}
             variant="secondary"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
           />
-          <Button
-            label="Export PNG"
-            variant="secondary"
-            size="sm"
-            isLoading={busy === 'png'}
-            isDisabled={!image || busy !== null}
-            onClick={() => void handleExport('png')}
-          />
-          <Button
-            label="Export JPEG"
-            variant="primary"
-            size="sm"
-            isLoading={busy === 'jpeg'}
-            isDisabled={!image || busy !== null}
-            onClick={() => void handleExport('jpeg')}
+          {/* One icon rather than two: a second download glyph would be
+              indistinguishable from the first, so the format is a choice inside
+              the menu instead of a guess between identical buttons. */}
+          <DropdownMenu
+            hasChevron={false}
+            button={{
+              label: 'Export',
+              icon: <DownloadIcon />,
+              isIconOnly: true,
+              variant: 'primary',
+              size: 'sm',
+              isLoading: busy !== null,
+              isDisabled: !image || busy !== null,
+              tooltip: 'Export',
+            }}
+            items={[
+              { id: 'jpeg', label: 'Export JPEG', onClick: () => void handleExport('jpeg') },
+              { id: 'png', label: 'Export PNG', onClick: () => void handleExport('png') },
+            ]}
           />
         </div>
       </header>

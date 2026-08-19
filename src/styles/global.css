@@ -135,12 +135,23 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 16px 0 4px;
+  padding: 6px 0 16px;
 }
 
-.panel-group-title {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.panel-group-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Count of moved sliders in a collapsed group. */
+.panel-group-trigger > :nth-child(2) {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-background-muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 860px) {

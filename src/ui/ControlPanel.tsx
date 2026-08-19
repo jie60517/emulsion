@@ -1,4 +1,4 @@
-import { Button, Divider, Slider, Text } from '@astryxdesign/core';
+import { Button, Collapsible, Slider, Text } from '@astryxdesign/core';
 import { GROUP_LABELS, PARAM_SPECS, type ParamKey, type ParamSpec, type Params } from '../state/params';
 
 type Props = {
@@ -9,6 +9,10 @@ type Props = {
 };
 
 const GROUP_ORDER: ParamSpec['group'][] = ['halation', 'grain', 'colour', 'tone'];
+
+/** Halation is the reason this tool exists, so it is the one group that opens
+ *  with the panel. Add a group here to have it start expanded. */
+const OPEN_BY_DEFAULT: ParamSpec['group'][] = ['halation'];
 
 export function ControlPanel({ params, onChange, onReset, disabled }: Props) {
   const isDefault = PARAM_SPECS.every((spec) => params[spec.key] === spec.neutral);
@@ -29,29 +33,47 @@ export function ControlPanel({ params, onChange, onReset, disabled }: Props) {
       </div>
 
       <div className="panel-body">
-        {GROUP_ORDER.map((group, index) => (
-          <section key={group} className="panel-group">
-            {index > 0 && <Divider />}
-            <Text type="supporting" color="secondary" className="panel-group-title">
-              {GROUP_LABELS[group]}
-            </Text>
-            {PARAM_SPECS.filter((spec) => spec.group === group).map((spec) => (
-              <Slider
-                key={spec.key}
-                label={spec.label}
-                value={params[spec.key]}
-                min={spec.min}
-                max={spec.max}
-                step={spec.step}
-                valueDisplay="text"
-                formatValue={spec.format}
-                isDisabled={disabled}
-                onChange={(value: number) => onChange(spec.key, value)}
-                width="100%"
-              />
-            ))}
-          </section>
-        ))}
+        {GROUP_ORDER.map((group) => {
+          const specs = PARAM_SPECS.filter((spec) => spec.group === group);
+          // A collapsed group must still admit that it is doing something,
+          // otherwise folding the panel away hides state rather than noise.
+          const touched = specs.filter((spec) => params[spec.key] !== spec.neutral).length;
+
+          return (
+            <Collapsible
+              key={group}
+              defaultIsOpen={OPEN_BY_DEFAULT.includes(group)}
+              trigger={
+                <span className="panel-group-trigger">
+                  <Text type="label">{GROUP_LABELS[group]}</Text>
+                  {touched > 0 && (
+                    <Text type="supporting" color="secondary">
+                      {touched}
+                    </Text>
+                  )}
+                </span>
+              }
+            >
+              <div className="panel-group">
+                {specs.map((spec) => (
+                  <Slider
+                    key={spec.key}
+                    label={spec.label}
+                    value={params[spec.key]}
+                    min={spec.min}
+                    max={spec.max}
+                    step={spec.step}
+                    valueDisplay="text"
+                    formatValue={spec.format}
+                    isDisabled={disabled}
+                    onChange={(value: number) => onChange(spec.key, value)}
+                    width="100%"
+                  />
+                ))}
+              </div>
+            </Collapsible>
+          );
+        })}
       </div>
     </div>
   );
