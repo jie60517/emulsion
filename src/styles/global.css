@@ -74,24 +74,6 @@ body {
   max-height: 100%;
 }
 
-.viewport-empty {
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
-.viewport-empty-title {
-  margin: 0 0 4px;
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-}
-
-.viewport-empty-hint {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  opacity: 0.7;
-}
-
 .panel {
   width: 300px;
   flex: none;

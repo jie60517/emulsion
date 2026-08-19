@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Button, EmptyState } from '@astryxdesign/core';
 import * as THREE from 'three';
 import { Pipeline } from '../render/Pipeline';
 import type { LoadedImage } from '../io/image';
 import type { Params } from '../state/params';
+import { PhotoIcon } from './icons';
 
 /** Preview cap. Full resolution is only ever rendered on export — this is what
  *  keeps a 24MP file interactive, and the effects are resolution-independent so
@@ -14,9 +16,10 @@ type Props = {
   params: Params;
   onPipelineReady: (pipeline: Pipeline) => void;
   onFiles: (files: FileList | null) => void;
+  onPickFile: () => void;
 };
 
-export function Viewport({ image, params, onPipelineReady, onFiles }: Props) {
+export function Viewport({ image, params, onPipelineReady, onFiles, onPickFile }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const pipelineRef = useRef<Pipeline | null>(null);
@@ -119,10 +122,19 @@ export function Viewport({ image, params, onPipelineReady, onFiles }: Props) {
     >
       <canvas ref={canvasRef} className="viewport-canvas" hidden={!image} />
       {!image && (
-        <div className="viewport-empty">
-          <p className="viewport-empty-title">Drop a photo to begin</p>
-          <p className="viewport-empty-hint">JPEG, PNG or WebP</p>
-        </div>
+        <EmptyState
+          icon={<PhotoIcon style={{ width: '2em', height: '2em' }} />}
+          title="Drop a photo to begin"
+          description="JPEG, PNG or WebP. Nothing is uploaded — every pixel stays on your machine."
+          actions={
+            <Button
+              label="Open photo"
+              variant="secondary"
+              size="sm"
+              onClick={() => onPickFile()}
+            />
+          }
+        />
       )}
     </div>
   );

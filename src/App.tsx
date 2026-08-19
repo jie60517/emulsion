@@ -142,6 +142,11 @@ export default function App() {
 
   return (
     <AppShell
+      // 'elevated' (the default) wants a padded, rounded, floating content
+      // surface. A photo tool needs the image edge-to-edge, so we take
+      // 'section' instead — it is the variant that draws a real divider between
+      // the nav and a full-bleed content area.
+      variant="section"
       height="fill"
       contentPadding={0}
       topNav={topNav}
@@ -152,7 +157,13 @@ export default function App() {
       }
     >
       <div className="workspace">
-        <Viewport image={image} params={params} onPipelineReady={onPipelineReady} onFiles={onFiles} />
+        <Viewport
+          image={image}
+          params={params}
+          onPipelineReady={onPipelineReady}
+          onFiles={onFiles}
+          onPickFile={() => fileInputRef.current?.click()}
+        />
         <ControlPanel
           params={params}
           onChange={setParam}
