@@ -1,17 +1,15 @@
 import { useState } from 'react';
-import {
-  Badge,
-  Button,
-  Dialog,
-  DropdownMenu,
-  Grid,
-  Icon,
-  SelectableCard,
-  Slider,
-  Stack,
-  Text,
-  TextInput,
-} from '@astryxdesign/core';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Button } from '@astryxdesign/core/Button';
+import { Dialog } from '@astryxdesign/core/Dialog';
+import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
+import { Grid } from '@astryxdesign/core/Grid';
+import { Icon } from '@astryxdesign/core/Icon';
+import { HStack, VStack } from '@astryxdesign/core/Layout';
+import { SelectableCard } from '@astryxdesign/core/SelectableCard';
+import { Slider } from '@astryxdesign/core/Slider';
+import { Text } from '@astryxdesign/core/Text';
+import { TextInput } from '@astryxdesign/core/TextInput';
 import {
   PRESETS,
   PRESET_GROUP_LABELS,
@@ -64,9 +62,9 @@ export function PresetPicker({
   }
 
   return (
-    <Stack direction="vertical" gap={2} paddingBlock={1}>
+    <VStack gap={2} paddingBlock={1}>
       {PRESET_GROUP_ORDER.map((group) => (
-        <Stack key={group} direction="vertical" gap={1}>
+        <VStack key={group} gap={1}>
           <Text type="supporting" color="secondary">
             {PRESET_GROUP_LABELS[group]}
           </Text>
@@ -78,27 +76,26 @@ export function PresetPicker({
                 isSelected={preset.id === activePresetId}
                 isDisabled={disabled}
                 padding={1}
-                height={76}
                 onChange={() => onApply(preset)}
               >
                 {/* SelectableCard's `label` only becomes the inner checkbox's
                     aria-label — unlike Button, it renders nothing. The visible
                     name has to be part of the children. */}
-                <Stack direction="vertical" gap={0.5}>
+                <VStack gap={0.5}>
                   <Text type="label">{preset.name}</Text>
                   <Text type="supporting" color="secondary">
                     {preset.note}
                   </Text>
-                </Stack>
+                </VStack>
               </SelectableCard>
             ))}
           </Grid>
-        </Stack>
+        </VStack>
       ))}
 
       {customLooks.length > 0 && (
-        <Stack direction="vertical" gap={1}>
-          <Stack direction="horizontal" justify="between" align="center">
+        <VStack gap={1}>
+          <HStack hAlign="between" vAlign="center">
             <Text type="supporting" color="secondary">
               Saved
             </Text>
@@ -121,7 +118,7 @@ export function PresetPicker({
                 onClick: () => onDeleteLook(look),
               }))}
             />
-          </Stack>
+          </HStack>
           <Grid columns={2} gap={1}>
             {customLooks.map((look) => (
               <SelectableCard
@@ -136,14 +133,14 @@ export function PresetPicker({
               </SelectableCard>
             ))}
           </Grid>
-        </Stack>
+        </VStack>
       )}
 
       {activePresetId && hasDrifted && (
-        <Stack direction="horizontal" justify="between" align="center" gap={1}>
+        <HStack gap={1} hAlign="between" vAlign="center">
           <Badge variant="neutral" label="Edited" />
           <Button label="Back to preset" variant="ghost" size="sm" onClick={onRevert} />
-        </Stack>
+        </HStack>
       )}
 
       {/* Blends the finished look back towards the untouched photo, so it stays
@@ -161,7 +158,7 @@ export function PresetPicker({
         width="100%"
       />
 
-      <Stack direction="horizontal" gap={1} align="center" justify="between">
+      <HStack gap={1} vAlign="center" hAlign="between">
         <Button
           label="Save look"
           variant="secondary"
@@ -185,10 +182,10 @@ export function PresetPicker({
             { id: 'import', label: 'Import .json', onClick: onImportFile },
           ]}
         />
-      </Stack>
+      </HStack>
 
       <Dialog isOpen={isSaveOpen} onOpenChange={setIsSaveOpen} width={340} padding={3}>
-        <Stack direction="vertical" gap={3}>
+        <VStack gap={3}>
           <Text type="label" weight="semibold">
             Save this look
           </Text>
@@ -204,7 +201,7 @@ export function PresetPicker({
           <Text type="supporting" color="secondary">
             Saved looks live in this browser only. Use Export .json to keep one somewhere safe.
           </Text>
-          <Stack direction="horizontal" gap={1} justify="end">
+          <HStack gap={1} hAlign="end">
             <Button label="Cancel" variant="ghost" size="sm" onClick={() => setIsSaveOpen(false)} />
             <Button
               label="Save"
@@ -213,9 +210,9 @@ export function PresetPicker({
               isDisabled={!draftName.trim()}
               onClick={commitSave}
             />
-          </Stack>
-        </Stack>
+          </HStack>
+        </VStack>
       </Dialog>
-    </Stack>
+    </VStack>
   );
 }

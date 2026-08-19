@@ -1,15 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
-import {
-  AppShell,
-  Banner,
-  DropdownMenu,
-  IconButton,
-  Layout,
-  Stack,
-  Text,
-  TopNav,
-  useToast,
-} from '@astryxdesign/core';
+import { AppShell } from '@astryxdesign/core/AppShell';
+import { Banner } from '@astryxdesign/core/Banner';
+import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { HStack, Layout } from '@astryxdesign/core/Layout';
+import { Text } from '@astryxdesign/core/Text';
+import { TopNav } from '@astryxdesign/core/TopNav';
+import { useToast } from '@astryxdesign/core/Toast';
 import { Viewport } from './ui/Viewport';
 import { ControlPanel } from './ui/ControlPanel';
 import { Pipeline } from './render/Pipeline';
@@ -227,17 +224,17 @@ export default function App() {
     <TopNav
       label="Emulsion"
       heading={
-        <Stack direction="horizontal" gap={1.5} align="center">
+        <HStack gap={1.5} vAlign="center">
           <Text type="label" weight="semibold">
             Emulsion
           </Text>
           <Text type="supporting" color="secondary">
             Cinestill 800T halation
           </Text>
-        </Stack>
+        </HStack>
       }
       endContent={
-        <Stack direction="horizontal" gap={1} align="center">
+        <HStack gap={1} vAlign="center">
           {image && (
             <Text type="supporting" color="secondary">
               {image.name} · {image.width}&#215;{image.height}
@@ -321,7 +318,7 @@ export default function App() {
               { id: 'png', label: 'Export PNG', onClick: () => void handleExport('png') },
             ]}
           />
-        </Stack>
+        </HStack>
       }
     />
   );

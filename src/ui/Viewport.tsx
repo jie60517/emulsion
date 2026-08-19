@@ -1,5 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Button, Center, EmptyState } from '@astryxdesign/core';
+import { Button } from '@astryxdesign/core/Button';
+import { Center } from '@astryxdesign/core/Center';
+import { EmptyState } from '@astryxdesign/core/EmptyState';
+import { LayoutContent } from '@astryxdesign/core/Layout';
+import { Icon } from '@astryxdesign/core/Icon';
 import * as THREE from 'three';
 import { Pipeline } from '../render/Pipeline';
 import type { LoadedImage } from '../io/image';
@@ -125,37 +129,41 @@ export function Viewport({
   }, [image, params, intensity, box]);
 
   return (
-    <Center
-      ref={frameRef}
-      axis="both"
-      height="100%"
-      padding={3}
-      style={{
-        background: isDark ? NEUTRAL_SURROUND_DARK : NEUTRAL_SURROUND_LIGHT,
-        overflow: 'hidden',
-        outline: dragging ? '2px dashed var(--color-border-emphasized)' : undefined,
-        outlineOffset: '-12px',
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setDragging(false);
-        onFiles(e.dataTransfer.files);
-      }}
-    >
-      <canvas ref={canvasRef} hidden={!image} style={{ display: 'block' }} />
-      {!image && (
-        <EmptyState
-          icon={<PhotoIcon style={{ width: '2em', height: '2em' }} />}
-          title="Drop a photo to begin"
-          description="JPEG, PNG or WebP. Nothing is uploaded — every pixel stays on your machine."
-          actions={<Button label="Open photo" variant="secondary" size="sm" onClick={onPickFile} />}
-        />
-      )}
-    </Center>
+    <LayoutContent padding={0}>
+      <Center
+        ref={frameRef}
+        axis="both"
+        height="100%"
+        padding={3}
+        style={{
+          background: isDark ? NEUTRAL_SURROUND_DARK : NEUTRAL_SURROUND_LIGHT,
+          overflow: 'hidden',
+          outline: dragging ? '2px dashed var(--color-border-emphasized)' : undefined,
+          outlineOffset: 'calc(-1 * var(--spacing-2))',
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          onFiles(e.dataTransfer.files);
+        }}
+      >
+        <canvas ref={canvasRef} hidden={!image} style={{ display: 'block' }} />
+        {!image && (
+          <EmptyState
+            icon={<Icon icon={PhotoIcon} size="lg" />}
+            title="Drop a photo to begin"
+            description="JPEG, PNG or WebP. Nothing is uploaded — every pixel stays on your machine."
+            actions={
+              <Button label="Open photo" variant="secondary" size="sm" onClick={onPickFile} />
+            }
+          />
+        )}
+      </Center>
+    </LayoutContent>
   );
 }
