@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
-import { DropdownMenu, IconButton, Text } from '@astryxdesign/core';
+import { AppShell, Banner, DropdownMenu, IconButton, Text, TopNav } from '@astryxdesign/core';
 import { Viewport } from './ui/Viewport';
 import { ControlPanel } from './ui/ControlPanel';
-import { DownloadIcon, PhotoIcon } from './ui/icons';
 import { Pipeline } from './render/Pipeline';
+import { DownloadIcon, PhotoIcon } from './ui/icons';
 import {
   ACCEPTED_TYPES,
   downloadBlob,
@@ -77,19 +77,21 @@ export default function App() {
     }
   }
 
-  return (
-    <div className="app">
-      <header className="topbar">
-        <div className="brand">
+  const topNav = (
+    <TopNav
+      label="Emulsion"
+      heading={
+        <span className="brand">
           <Text type="label" weight="semibold">
             Emulsion
           </Text>
           <Text type="supporting" color="secondary">
             Cinestill 800T halation
           </Text>
-        </div>
-
-        <div className="topbar-actions">
+        </span>
+      }
+      endContent={
+        <span className="topbar-actions">
           {image && (
             <Text type="supporting" color="secondary">
               {image.name} · {image.width}&#215;{image.height}
@@ -117,6 +119,7 @@ export default function App() {
               the menu instead of a guess between identical buttons. */}
           <DropdownMenu
             hasChevron={false}
+            alignment="end"
             button={{
               label: 'Export',
               icon: <DownloadIcon />,
@@ -132,16 +135,23 @@ export default function App() {
               { id: 'png', label: 'Export PNG', onClick: () => void handleExport('png') },
             ]}
           />
-        </div>
-      </header>
+        </span>
+      }
+    />
+  );
 
-      {error && (
-        <div className="error-bar" role="alert">
-          <Text type="supporting">{error}</Text>
-        </div>
-      )}
-
-      <main className="workspace">
+  return (
+    <AppShell
+      height="fill"
+      contentPadding={0}
+      topNav={topNav}
+      banner={
+        error ? (
+          <Banner status="error" title={error} isDismissable onDismiss={() => setError(null)} />
+        ) : undefined
+      }
+    >
+      <div className="workspace">
         <Viewport image={image} params={params} onPipelineReady={onPipelineReady} onFiles={onFiles} />
         <ControlPanel
           params={params}
@@ -149,7 +159,7 @@ export default function App() {
           onReset={() => setParams(DEFAULT_PARAMS)}
           disabled={!image}
         />
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
