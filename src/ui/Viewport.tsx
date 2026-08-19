@@ -156,8 +156,7 @@ export function Viewport({
         {!image && (
           <EmptyState
             icon={<Icon icon={PhotoIcon} size="lg" />}
-            title="Drop a photo to begin"
-            description="JPEG, PNG or WebP. Nothing is uploaded — every pixel stays on your machine."
+            title="Drop a photo"
             actions={
               <Button label="Open photo" variant="secondary" size="sm" onClick={onPickFile} />
             }

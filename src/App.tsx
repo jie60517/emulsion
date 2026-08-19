@@ -135,7 +135,7 @@ export default function App() {
       setCustomLooks(saved);
       const match = saved.find((look) => look.name.toLowerCase() === name.trim().toLowerCase());
       if (match) setPresetId(match.id);
-      toast({ body: `Saved “${name.trim()}”` });
+      toast({ body: `Saved ${name.trim()}` });
     },
     [params, toast],
   );
@@ -144,7 +144,7 @@ export default function App() {
     (look: CustomLook) => {
       setCustomLooks(deleteCustomLook(look.id));
       setPresetId((current) => (current === look.id ? null : current));
-      toast({ body: `Deleted “${look.name}”` });
+      toast({ body: `Deleted ${look.name}` });
     },
     [toast],
   );
@@ -159,7 +159,7 @@ export default function App() {
       // useful, so put it in the address bar for the user to copy by hand
       // rather than failing silently.
       window.history.replaceState(null, '', url);
-      toast({ body: 'Could not reach the clipboard. The link is in the address bar.', type: 'error' });
+      toast({ body: 'Clipboard blocked. Link is in the address bar.', type: 'error' });
     }
   }, [params, intensity, presetId, toast]);
 
@@ -182,7 +182,7 @@ export default function App() {
         setIntensity(parsed.intensity);
         setPresetId(null);
         clearShareParam();
-        toast({ body: `Loaded “${parsed.name}”` });
+        toast({ body: `Loaded ${parsed.name}` });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'That look could not be read.');
       }
@@ -197,7 +197,7 @@ export default function App() {
     const maxTexture = pipeline.renderer.capabilities.maxTextureSize;
     if (image.width > maxTexture || image.height > maxTexture) {
       setError(
-        `This photo is ${image.width}×${image.height}, larger than the ${maxTexture}px limit your GPU reports. Resize it and try again.`,
+        `${image.width}×${image.height} exceeds this GPU's ${maxTexture}px limit. Resize and retry.`,
       );
       return;
     }
@@ -224,14 +224,9 @@ export default function App() {
     <TopNav
       label="Emulsion"
       heading={
-        <HStack gap={1.5} vAlign="center">
-          <Text type="label" weight="semibold">
-            Emulsion
-          </Text>
-          <Text type="supporting" color="secondary">
-            Cinestill 800T halation
-          </Text>
-        </HStack>
+        <Text type="label" weight="semibold">
+          Emulsion
+        </Text>
       }
       endContent={
         <HStack gap={1} vAlign="center">
@@ -281,7 +276,7 @@ export default function App() {
               {
                 id: 'scheme',
                 label: DARK_ONLY_THEMES.includes(theme)
-                  ? 'Light mode (not in Gothic)'
+                  ? 'Light mode'
                   : scheme === 'dark'
                     ? 'Switch to light'
                     : 'Switch to dark',

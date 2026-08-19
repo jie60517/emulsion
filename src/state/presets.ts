@@ -5,10 +5,6 @@ export type PresetGroup = 'film' | 'cinematic' | 'texture';
 export type Preset = {
   id: string;
   name: string;
-  /** Small print under the name. Where a look references a film, the reference
-   *  lives here rather than in the name — the look is the product, not the
-   *  director's name. */
-  note: string;
   group: PresetGroup;
   params: Params;
 };
@@ -18,11 +14,10 @@ export type Preset = {
 function preset(
   id: string,
   name: string,
-  note: string,
   group: PresetGroup,
   overrides: Partial<Params>,
 ): Preset {
-  return { id, name, note, group, params: { ...DEFAULT_PARAMS, ...overrides } };
+  return { id, name, group, params: { ...DEFAULT_PARAMS, ...overrides } };
 }
 
 export const PRESET_GROUP_LABELS: Record<PresetGroup, string> = {
@@ -34,7 +29,7 @@ export const PRESET_GROUP_LABELS: Record<PresetGroup, string> = {
 export const PRESET_GROUP_ORDER: PresetGroup[] = ['film', 'cinematic', 'texture'];
 
 export const PRESETS: Preset[] = [
-  preset('800t-night', '800T Night', 'The tungsten stock, wide open', 'film', {
+  preset('800t-night', '800T Night', 'film', {
     halationStrength: 85,
     halationRadius: 55,
     halationThreshold: 55,
@@ -48,7 +43,7 @@ export const PRESETS: Preset[] = [
     saturation: 6,
     vignette: 18,
   }),
-  preset('portra-warm', 'Portra Warm', 'Soft skin, low contrast', 'film', {
+  preset('portra-warm', 'Portra Warm', 'film', {
     halationStrength: 25,
     halationRadius: 40,
     halationThreshold: 70,
@@ -65,7 +60,7 @@ export const PRESETS: Preset[] = [
     saturation: -6,
     vignette: 10,
   }),
-  preset('tri-x-mono', 'Tri-X Mono', 'Black and white, coarse', 'film', {
+  preset('tri-x-mono', 'Tri-X Mono', 'film', {
     halationStrength: 30,
     halationRadius: 45,
     halationThreshold: 60,
@@ -79,7 +74,7 @@ export const PRESETS: Preset[] = [
     vignette: 22,
   }),
 
-  preset('cold-steel', 'Cold Steel', 'Tenet, Dunkirk', 'cinematic', {
+  preset('cold-steel', 'Cold Steel', 'cinematic', {
     halationStrength: 18,
     halationRadius: 50,
     halationThreshold: 72,
@@ -94,7 +89,7 @@ export const PRESETS: Preset[] = [
     saturation: -34,
     vignette: 14,
   }),
-  preset('amber-field', 'Amber Field', 'Interstellar', 'cinematic', {
+  preset('amber-field', 'Amber Field', 'cinematic', {
     halationStrength: 40,
     halationRadius: 55,
     halationThreshold: 62,
@@ -110,7 +105,7 @@ export const PRESETS: Preset[] = [
     saturation: -12,
     vignette: 16,
   }),
-  preset('fission', 'Fission', 'Oppenheimer', 'cinematic', {
+  preset('fission', 'Fission', 'cinematic', {
     halationStrength: 46,
     halationRadius: 48,
     halationThreshold: 58,
@@ -127,11 +122,11 @@ export const PRESETS: Preset[] = [
     vignette: 20,
   }),
 
-  preset('heavy-grain', 'Heavy Grain', 'Texture only', 'texture', {
+  preset('heavy-grain', 'Heavy Grain', 'texture', {
     grainStrength: 78,
     grainSize: 145,
   }),
-  preset('soft-bloom', 'Soft Bloom', 'Halo only', 'texture', {
+  preset('soft-bloom', 'Soft Bloom', 'texture', {
     halationStrength: 110,
     halationRadius: 72,
     halationThreshold: 48,

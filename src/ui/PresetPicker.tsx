@@ -81,12 +81,7 @@ export function PresetPicker({
                 {/* SelectableCard's `label` only becomes the inner checkbox's
                     aria-label — unlike Button, it renders nothing. The visible
                     name has to be part of the children. */}
-                <VStack gap={0.5}>
-                  <Text type="label">{preset.name}</Text>
-                  <Text type="supporting" color="secondary">
-                    {preset.note}
-                  </Text>
-                </VStack>
+                <Text type="label">{preset.name}</Text>
               </SelectableCard>
             ))}
           </Grid>
@@ -186,9 +181,6 @@ export function PresetPicker({
 
       <Dialog isOpen={isSaveOpen} onOpenChange={setIsSaveOpen} width={340} padding={3}>
         <VStack gap={3}>
-          <Text type="label" weight="semibold">
-            Save this look
-          </Text>
           <TextInput
             label="Name"
             value={draftName}
@@ -198,9 +190,6 @@ export function PresetPicker({
             onEnter={commitSave}
             width="100%"
           />
-          <Text type="supporting" color="secondary">
-            Saved looks live in this browser only. Use Export .json to keep one somewhere safe.
-          </Text>
           <HStack gap={1} hAlign="end">
             <Button label="Cancel" variant="ghost" size="sm" onClick={() => setIsSaveOpen(false)} />
             <Button
