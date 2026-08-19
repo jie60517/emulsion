@@ -1,11 +1,19 @@
 import { Badge, Button, Collapsible, Divider, Section, Slider, Stack, Text } from '@astryxdesign/core';
 import { GROUP_LABELS, PARAM_SPECS, type ParamKey, type ParamSpec, type Params } from '../state/params';
+import { PresetPicker } from './PresetPicker';
+import type { Preset } from '../state/presets';
 
 type Props = {
   params: Params;
   onChange: (key: ParamKey, value: number) => void;
   onReset: () => void;
   disabled: boolean;
+  activePresetId: string | null;
+  hasDrifted: boolean;
+  intensity: number;
+  onApplyPreset: (preset: Preset) => void;
+  onRevertPreset: () => void;
+  onIntensityChange: (value: number) => void;
 };
 
 const GROUP_ORDER: ParamSpec['group'][] = ['halation', 'grain', 'colour', 'tone'];
@@ -14,7 +22,18 @@ const GROUP_ORDER: ParamSpec['group'][] = ['halation', 'grain', 'colour', 'tone'
  *  with the panel. Add a group here to have it start expanded. */
 const OPEN_BY_DEFAULT: ParamSpec['group'][] = ['halation'];
 
-export function ControlPanel({ params, onChange, onReset, disabled }: Props) {
+export function ControlPanel({
+  params,
+  onChange,
+  onReset,
+  disabled,
+  activePresetId,
+  hasDrifted,
+  intensity,
+  onApplyPreset,
+  onRevertPreset,
+  onIntensityChange,
+}: Props) {
   const isDefault = PARAM_SPECS.every((spec) => params[spec.key] === spec.neutral);
 
   return (
@@ -42,6 +61,26 @@ export function ControlPanel({ params, onChange, onReset, disabled }: Props) {
         <Divider />
 
         <Stack direction="vertical" isScrollable paddingInline={2} paddingBlock={1} gap={0}>
+          <Collapsible
+            defaultIsOpen
+            trigger={
+              <Stack direction="horizontal" gap={1} align="center">
+                <Text type="label">Looks</Text>
+                {activePresetId && hasDrifted && <Badge variant="neutral" label="edited" />}
+              </Stack>
+            }
+          >
+            <PresetPicker
+              activePresetId={activePresetId}
+              hasDrifted={hasDrifted}
+              intensity={intensity}
+              disabled={disabled}
+              onApply={onApplyPreset}
+              onRevert={onRevertPreset}
+              onIntensityChange={onIntensityChange}
+            />
+          </Collapsible>
+
           {GROUP_ORDER.map((group) => {
             const specs = PARAM_SPECS.filter((spec) => spec.group === group);
             // A collapsed group must still admit that it is doing something,

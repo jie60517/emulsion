@@ -14,11 +14,14 @@ import {
   type LoadedImage,
 } from './io/image';
 import { DEFAULT_PARAMS, type ParamKey, type Params } from './state/params';
+import { findPreset, matchesPreset, type Preset } from './state/presets';
 
 export default function App() {
   const [image, setImage] = useState<LoadedImage | null>(null);
   const [params, setParams] = useState<Params>(DEFAULT_PARAMS);
   const [error, setError] = useState<string | null>(null);
+  const [presetId, setPresetId] = useState<string | null>(null);
+  const [intensity, setIntensity] = useState(100);
   const [busy, setBusy] = useState<ExportFormat | null>(null);
 
   const pipelineRef = useRef<Pipeline | null>(null);
@@ -47,6 +50,20 @@ export default function App() {
     setParams((previous) => ({ ...previous, [key]: value }));
   }, []);
 
+  const applyPreset = useCallback((preset: Preset) => {
+    setParams(preset.params);
+    setPresetId(preset.id);
+  }, []);
+
+  const revertPreset = useCallback(() => {
+    setParams((previous) => findPreset(presetId)?.params ?? previous);
+  }, [presetId]);
+
+  // The applied preset stays highlighted after manual edits, but says so — a
+  // highlighted preset that no longer describes the image is a lie.
+  const activePreset = findPreset(presetId);
+  const hasDrifted = activePreset !== null && !matchesPreset(params, activePreset);
+
   async function handleExport(format: ExportFormat) {
     const pipeline = pipelineRef.current;
     if (!pipeline || !image || busy) return;
@@ -67,7 +84,7 @@ export default function App() {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     try {
-      const pixels = pipeline.renderToPixels(params, image.width, image.height);
+      const pixels = pipeline.renderToPixels(params, image.width, image.height, 0, intensity / 100);
       const blob = await pixelsToBlob(pixels, image.width, image.height, format);
       downloadBlob(blob, exportFilename(image.name, format));
     } catch (err) {
@@ -163,6 +180,7 @@ export default function App() {
           <Viewport
             image={image}
             params={params}
+            intensity={intensity}
             onPipelineReady={onPipelineReady}
             onFiles={onFiles}
             onPickFile={() => fileInputRef.current?.click()}
@@ -172,8 +190,18 @@ export default function App() {
           <ControlPanel
             params={params}
             onChange={setParam}
-            onReset={() => setParams(DEFAULT_PARAMS)}
+            onReset={() => {
+              setParams(DEFAULT_PARAMS);
+              setPresetId(null);
+              setIntensity(100);
+            }}
             disabled={!image}
+            activePresetId={presetId}
+            hasDrifted={hasDrifted}
+            intensity={intensity}
+            onApplyPreset={applyPreset}
+            onRevertPreset={revertPreset}
+            onIntensityChange={setIntensity}
           />
         }
       />

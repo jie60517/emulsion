@@ -21,12 +21,13 @@ const NEUTRAL_SURROUND = '#1a1a1a';
 type Props = {
   image: LoadedImage | null;
   params: Params;
+  intensity: number;
   onPipelineReady: (pipeline: Pipeline) => void;
   onFiles: (files: FileList | null) => void;
   onPickFile: () => void;
 };
 
-export function Viewport({ image, params, onPipelineReady, onFiles, onPickFile }: Props) {
+export function Viewport({ image, params, intensity, onPipelineReady, onFiles, onPickFile }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const pipelineRef = useRef<Pipeline | null>(null);
@@ -108,8 +109,8 @@ export function Viewport({ image, params, onPipelineReady, onFiles, onPickFile }
     // Rendered synchronously. React already coalesces rapid slider changes into
     // one effect run, and going through rAF would stall the preview whenever the
     // tab is not compositing.
-    pipeline.render(params, renderWidth, renderHeight, null);
-  }, [image, params, box]);
+    pipeline.render(params, renderWidth, renderHeight, null, 0, intensity / 100);
+  }, [image, params, intensity, box]);
 
   return (
     <Center

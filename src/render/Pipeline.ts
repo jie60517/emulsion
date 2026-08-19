@@ -269,7 +269,13 @@ export class Pipeline {
   }
 
   /** Renders at full source resolution and reads the pixels back, top row first. */
-  renderToPixels(params: Params, width: number, height: number, seed = 0): Uint8ClampedArray {
+  renderToPixels(
+    params: Params,
+    width: number,
+    height: number,
+    seed = 0,
+    mix = 1,
+  ): Uint8ClampedArray {
     const target = new THREE.WebGLRenderTarget(width, height, {
       type: THREE.UnsignedByteType,
       format: THREE.RGBAFormat,
@@ -280,7 +286,7 @@ export class Pipeline {
     });
 
     try {
-      this.render(params, width, height, target, seed, 1);
+      this.render(params, width, height, target, seed, mix);
       const raw = new Uint8Array(width * height * 4);
       this.renderer.readRenderTargetPixels(target, 0, 0, width, height, raw);
 
