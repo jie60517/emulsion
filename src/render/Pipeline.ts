@@ -6,6 +6,14 @@ import { BLUR_FRAG, COMPOSITE_FRAG, DOWNSAMPLE_FRAG, LEVELS, THRESHOLD_FRAG, VER
  *  blue barely at all — this ratio is what makes the halo read white → orange → red
  *  instead of a flat red fog. */
 const CHANNEL_SPREAD = [1.0, 0.6, 0.32];
+
+/** How far below the render size the blur pyramid starts. Halation is
+ *  low-frequency by nature, so the base level carries no detail worth paying
+ *  full fill rate for. */
+export let PYRAMID_BASE_SHIFT = 1;
+export function setPyramidBaseShift(shift: number) {
+  PYRAMID_BASE_SHIFT = shift;
+}
 const SPREAD_SIGMA = 0.95;
 
 function srgbToLinear(c: number): number {
@@ -59,6 +67,7 @@ export class Pipeline {
   private scratch: Target[] = [];
   private pyramidWidth = 0;
   private pyramidHeight = 0;
+  private pyramidShift = PYRAMID_BASE_SHIFT;
 
   private source: THREE.Texture | null = null;
 
@@ -188,7 +197,14 @@ export class Pipeline {
   }
 
   private ensurePyramid(width: number, height: number) {
-    if (this.pyramidWidth === width && this.pyramidHeight === height && this.levels.length) return;
+    if (
+      this.pyramidWidth === width &&
+      this.pyramidHeight === height &&
+      this.pyramidShift === PYRAMID_BASE_SHIFT &&
+      this.levels.length
+    )
+      return;
+    this.pyramidShift = PYRAMID_BASE_SHIFT;
     this.disposePyramid();
     this.pyramidWidth = width;
     this.pyramidHeight = height;
@@ -204,8 +220,8 @@ export class Pipeline {
     };
 
     for (let i = 0; i < LEVELS; i++) {
-      const w = Math.max(2, width >> (i + 1));
-      const h = Math.max(2, height >> (i + 1));
+      const w = Math.max(2, width >> (i + PYRAMID_BASE_SHIFT));
+      const h = Math.max(2, height >> (i + PYRAMID_BASE_SHIFT));
       this.levels.push(new THREE.WebGLRenderTarget(w, h, options));
       this.scratch.push(new THREE.WebGLRenderTarget(w, h, options));
     }
