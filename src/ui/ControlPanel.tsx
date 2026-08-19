@@ -2,6 +2,7 @@ import { Badge, Button, Collapsible, Divider, Section, Slider, Stack, Text } fro
 import { GROUP_LABELS, PARAM_SPECS, type ParamKey, type ParamSpec, type Params } from '../state/params';
 import { PresetPicker } from './PresetPicker';
 import type { Preset } from '../state/presets';
+import type { CustomLook } from '../state/persistence';
 
 type Props = {
   params: Params;
@@ -14,6 +15,13 @@ type Props = {
   onApplyPreset: (preset: Preset) => void;
   onRevertPreset: () => void;
   onIntensityChange: (value: number) => void;
+  customLooks: CustomLook[];
+  onApplyCustom: (look: CustomLook) => void;
+  onSaveLook: (name: string) => void;
+  onDeleteLook: (look: CustomLook) => void;
+  onCopyLink: () => void;
+  onExportFile: () => void;
+  onImportFile: () => void;
 };
 
 const GROUP_ORDER: ParamSpec['group'][] = ['halation', 'grain', 'colour', 'tone'];
@@ -33,6 +41,13 @@ export function ControlPanel({
   onApplyPreset,
   onRevertPreset,
   onIntensityChange,
+  customLooks,
+  onApplyCustom,
+  onSaveLook,
+  onDeleteLook,
+  onCopyLink,
+  onExportFile,
+  onImportFile,
 }: Props) {
   const isDefault = PARAM_SPECS.every((spec) => params[spec.key] === spec.neutral);
 
@@ -78,6 +93,13 @@ export function ControlPanel({
               onApply={onApplyPreset}
               onRevert={onRevertPreset}
               onIntensityChange={onIntensityChange}
+              customLooks={customLooks}
+              onApplyCustom={onApplyCustom}
+              onSaveLook={onSaveLook}
+              onDeleteLook={onDeleteLook}
+              onCopyLink={onCopyLink}
+              onExportFile={onExportFile}
+              onImportFile={onImportFile}
             />
           </Collapsible>
 

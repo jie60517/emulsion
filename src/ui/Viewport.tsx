@@ -15,8 +15,11 @@ const PREVIEW_MAX = 2048;
  * The one colour in this app that is deliberately not a theme token. The
  * surround of the image has to be neutral grey: a tinted background changes how
  * warm the photo looks and quietly biases every colour decision made against it.
+ * It still has to follow the interface between light and dark, or a light theme
+ * would frame the photo in a black hole.
  */
-const NEUTRAL_SURROUND = '#1a1a1a';
+const NEUTRAL_SURROUND_DARK = '#1a1a1a';
+const NEUTRAL_SURROUND_LIGHT = '#e8e8e8';
 
 type Props = {
   image: LoadedImage | null;
@@ -25,9 +28,18 @@ type Props = {
   onPipelineReady: (pipeline: Pipeline) => void;
   onFiles: (files: FileList | null) => void;
   onPickFile: () => void;
+  isDark: boolean;
 };
 
-export function Viewport({ image, params, intensity, onPipelineReady, onFiles, onPickFile }: Props) {
+export function Viewport({
+  image,
+  params,
+  intensity,
+  onPipelineReady,
+  onFiles,
+  onPickFile,
+  isDark,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const pipelineRef = useRef<Pipeline | null>(null);
@@ -119,7 +131,7 @@ export function Viewport({ image, params, intensity, onPipelineReady, onFiles, o
       height="100%"
       padding={3}
       style={{
-        background: NEUTRAL_SURROUND,
+        background: isDark ? NEUTRAL_SURROUND_DARK : NEUTRAL_SURROUND_LIGHT,
         overflow: 'hidden',
         outline: dragging ? '2px dashed var(--color-border-emphasized)' : undefined,
         outlineOffset: '-12px',

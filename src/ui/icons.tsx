@@ -39,3 +39,13 @@ export function DownloadIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** Overlapping swatches — "change how this looks". */
+export function PaletteIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="9" cy="9" r="5.5" />
+      <circle cx="15" cy="15" r="5.5" />
+    </svg>
+  );
+}

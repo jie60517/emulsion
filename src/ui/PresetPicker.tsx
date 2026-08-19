@@ -1,19 +1,40 @@
-import { Badge, Button, Grid, SelectableCard, Slider, Stack, Text } from '@astryxdesign/core';
+import { useState } from 'react';
+import {
+  Badge,
+  Button,
+  Dialog,
+  DropdownMenu,
+  Grid,
+  Icon,
+  SelectableCard,
+  Slider,
+  Stack,
+  Text,
+  TextInput,
+} from '@astryxdesign/core';
 import {
   PRESETS,
   PRESET_GROUP_LABELS,
   PRESET_GROUP_ORDER,
   type Preset,
 } from '../state/presets';
+import type { CustomLook } from '../state/persistence';
 
 type Props = {
   activePresetId: string | null;
   hasDrifted: boolean;
   intensity: number;
   disabled: boolean;
+  customLooks: CustomLook[];
   onApply: (preset: Preset) => void;
+  onApplyCustom: (look: CustomLook) => void;
   onRevert: () => void;
   onIntensityChange: (value: number) => void;
+  onSaveLook: (name: string) => void;
+  onDeleteLook: (look: CustomLook) => void;
+  onCopyLink: () => void;
+  onExportFile: () => void;
+  onImportFile: () => void;
 };
 
 export function PresetPicker({
@@ -21,10 +42,27 @@ export function PresetPicker({
   hasDrifted,
   intensity,
   disabled,
+  customLooks,
   onApply,
+  onApplyCustom,
   onRevert,
   onIntensityChange,
+  onSaveLook,
+  onDeleteLook,
+  onCopyLink,
+  onExportFile,
+  onImportFile,
 }: Props) {
+  const [isSaveOpen, setIsSaveOpen] = useState(false);
+  const [draftName, setDraftName] = useState('');
+
+  function commitSave() {
+    if (!draftName.trim()) return;
+    onSaveLook(draftName);
+    setDraftName('');
+    setIsSaveOpen(false);
+  }
+
   return (
     <Stack direction="vertical" gap={2} paddingBlock={1}>
       {PRESET_GROUP_ORDER.map((group) => (
@@ -40,6 +78,7 @@ export function PresetPicker({
                 isSelected={preset.id === activePresetId}
                 isDisabled={disabled}
                 padding={1}
+                height={76}
                 onChange={() => onApply(preset)}
               >
                 {/* SelectableCard's `label` only becomes the inner checkbox's
@@ -56,6 +95,49 @@ export function PresetPicker({
           </Grid>
         </Stack>
       ))}
+
+      {customLooks.length > 0 && (
+        <Stack direction="vertical" gap={1}>
+          <Stack direction="horizontal" justify="between" align="center">
+            <Text type="supporting" color="secondary">
+              Saved
+            </Text>
+            {/* Delete lives in a menu rather than on the card: a card that is
+                itself a checkbox cannot safely nest another control. */}
+            <DropdownMenu
+              hasChevron={false}
+              alignment="end"
+              button={{
+                label: 'Manage saved looks',
+                icon: <Icon icon="moreHorizontal" />,
+                isIconOnly: true,
+                variant: 'ghost',
+                size: 'sm',
+              }}
+              items={customLooks.map((look) => ({
+                id: look.id,
+                label: `Delete ${look.name}`,
+                variant: 'destructive' as const,
+                onClick: () => onDeleteLook(look),
+              }))}
+            />
+          </Stack>
+          <Grid columns={2} gap={1}>
+            {customLooks.map((look) => (
+              <SelectableCard
+                key={look.id}
+                label={look.name}
+                isSelected={look.id === activePresetId}
+                isDisabled={disabled}
+                padding={1}
+                onChange={() => onApplyCustom(look)}
+              >
+                <Text type="label">{look.name}</Text>
+              </SelectableCard>
+            ))}
+          </Grid>
+        </Stack>
+      )}
 
       {activePresetId && hasDrifted && (
         <Stack direction="horizontal" justify="between" align="center" gap={1}>
@@ -78,6 +160,62 @@ export function PresetPicker({
         onChange={(value: number) => onIntensityChange(value)}
         width="100%"
       />
+
+      <Stack direction="horizontal" gap={1} align="center" justify="between">
+        <Button
+          label="Save look"
+          variant="secondary"
+          size="sm"
+          isDisabled={disabled}
+          onClick={() => setIsSaveOpen(true)}
+        />
+        <DropdownMenu
+          hasChevron={false}
+          alignment="end"
+          button={{
+            label: 'Share and transfer',
+            icon: <Icon icon="moreHorizontal" />,
+            isIconOnly: true,
+            variant: 'ghost',
+            size: 'sm',
+          }}
+          items={[
+            { id: 'link', label: 'Copy share link', onClick: onCopyLink },
+            { id: 'export', label: 'Export .json', onClick: onExportFile },
+            { id: 'import', label: 'Import .json', onClick: onImportFile },
+          ]}
+        />
+      </Stack>
+
+      <Dialog isOpen={isSaveOpen} onOpenChange={setIsSaveOpen} width={340} padding={3}>
+        <Stack direction="vertical" gap={3}>
+          <Text type="label" weight="semibold">
+            Save this look
+          </Text>
+          <TextInput
+            label="Name"
+            value={draftName}
+            placeholder="Neon rain"
+            hasAutoFocus
+            onChange={(value: string) => setDraftName(value)}
+            onEnter={commitSave}
+            width="100%"
+          />
+          <Text type="supporting" color="secondary">
+            Saved looks live in this browser only. Use Export .json to keep one somewhere safe.
+          </Text>
+          <Stack direction="horizontal" gap={1} justify="end">
+            <Button label="Cancel" variant="ghost" size="sm" onClick={() => setIsSaveOpen(false)} />
+            <Button
+              label="Save"
+              variant="primary"
+              size="sm"
+              isDisabled={!draftName.trim()}
+              onClick={commitSave}
+            />
+          </Stack>
+        </Stack>
+      </Dialog>
     </Stack>
   );
 }

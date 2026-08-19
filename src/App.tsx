@@ -1,9 +1,19 @@
 import { useCallback, useRef, useState } from 'react';
-import { AppShell, Banner, DropdownMenu, IconButton, Layout, Stack, Text, TopNav } from '@astryxdesign/core';
+import {
+  AppShell,
+  Banner,
+  DropdownMenu,
+  IconButton,
+  Layout,
+  Stack,
+  Text,
+  TopNav,
+  useToast,
+} from '@astryxdesign/core';
 import { Viewport } from './ui/Viewport';
 import { ControlPanel } from './ui/ControlPanel';
 import { Pipeline } from './render/Pipeline';
-import { DownloadIcon, PhotoIcon } from './ui/icons';
+import { DownloadIcon, PaletteIcon, PhotoIcon } from './ui/icons';
 import {
   ACCEPTED_TYPES,
   downloadBlob,
@@ -13,19 +23,61 @@ import {
   type ExportFormat,
   type LoadedImage,
 } from './io/image';
-import { DEFAULT_PARAMS, type ParamKey, type Params } from './state/params';
-import { findPreset, matchesPreset, type Preset } from './state/presets';
+import { DEFAULT_PARAMS, PARAM_SPECS, type ParamKey, type Params } from './state/params';
+import { findPreset, type Preset } from './state/presets';
+import {
+  DARK_ONLY_THEMES,
+  THEMES,
+  THEME_LABELS,
+  applyTheme,
+  chooseTheme,
+  isDarkNow,
+  loadScheme,
+  loadTheme,
+  type SchemeName,
+  type ThemeName,
+} from './state/theme';
+import {
+  buildShareUrl,
+  clearShareParam,
+  decodeShareState,
+  deleteCustomLook,
+  loadCustomLooks,
+  lookToFile,
+  parseLookFile,
+  saveCustomLook,
+  type CustomLook,
+} from './state/persistence';
+
+/** Read once, at module load: the address bar cannot change under us before the
+ *  first render, and re-parsing it inside every state initialiser is waste. */
+const SHARED = decodeShareState(window.location.search);
+
+function paramsEqual(a: Params, b: Params): boolean {
+  return PARAM_SPECS.every((spec) => a[spec.key] === b[spec.key]);
+}
 
 export default function App() {
   const [image, setImage] = useState<LoadedImage | null>(null);
-  const [params, setParams] = useState<Params>(DEFAULT_PARAMS);
+  const [params, setParams] = useState<Params>(SHARED?.params ?? DEFAULT_PARAMS);
   const [error, setError] = useState<string | null>(null);
-  const [presetId, setPresetId] = useState<string | null>(null);
-  const [intensity, setIntensity] = useState(100);
   const [busy, setBusy] = useState<ExportFormat | null>(null);
+  const [presetId, setPresetId] = useState<string | null>(SHARED?.presetId ?? null);
+  const [intensity, setIntensity] = useState(SHARED?.intensity ?? 100);
+  const [customLooks, setCustomLooks] = useState<CustomLook[]>(() => loadCustomLooks());
+  const [theme] = useState<ThemeName>(() => loadTheme());
+  const [scheme] = useState<SchemeName>(() => loadScheme());
 
+  // Applied during render rather than in an effect: the attribute has to be on
+  // the root before the browser paints, or the first frame flashes the wrong
+  // theme.
+  applyTheme(theme, scheme);
+  const isDark = isDarkNow(theme, scheme);
+
+  const toast = useToast();
   const pipelineRef = useRef<Pipeline | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lookInputRef = useRef<HTMLInputElement>(null);
 
   const onPipelineReady = useCallback((pipeline: Pipeline) => {
     pipelineRef.current = pipeline;
@@ -48,21 +100,98 @@ export default function App() {
 
   const setParam = useCallback((key: ParamKey, value: number) => {
     setParams((previous) => ({ ...previous, [key]: value }));
+    // The URL described a look that no longer matches what is on screen.
+    clearShareParam();
   }, []);
 
   const applyPreset = useCallback((preset: Preset) => {
     setParams(preset.params);
     setPresetId(preset.id);
+    clearShareParam();
   }, []);
 
-  const revertPreset = useCallback(() => {
-    setParams((previous) => findPreset(presetId)?.params ?? previous);
-  }, [presetId]);
+  const applyCustom = useCallback((look: CustomLook) => {
+    setParams(look.params);
+    setPresetId(look.id);
+    clearShareParam();
+  }, []);
 
-  // The applied preset stays highlighted after manual edits, but says so — a
+  // The applied look stays highlighted after manual edits, but says so — a
   // highlighted preset that no longer describes the image is a lie.
-  const activePreset = findPreset(presetId);
-  const hasDrifted = activePreset !== null && !matchesPreset(params, activePreset);
+  const activeParams =
+    findPreset(presetId)?.params ??
+    customLooks.find((look) => look.id === presetId)?.params ??
+    null;
+  const hasDrifted = activeParams !== null && !paramsEqual(params, activeParams);
+  const activeName =
+    findPreset(presetId)?.name ??
+    customLooks.find((look) => look.id === presetId)?.name ??
+    'Custom look';
+
+  const revertPreset = useCallback(() => {
+    if (activeParams) setParams(activeParams);
+  }, [activeParams]);
+
+  const handleSaveLook = useCallback(
+    (name: string) => {
+      const saved = saveCustomLook(name, params);
+      setCustomLooks(saved);
+      const match = saved.find((look) => look.name.toLowerCase() === name.trim().toLowerCase());
+      if (match) setPresetId(match.id);
+      toast({ body: `Saved “${name.trim()}”` });
+    },
+    [params, toast],
+  );
+
+  const handleDeleteLook = useCallback(
+    (look: CustomLook) => {
+      setCustomLooks(deleteCustomLook(look.id));
+      setPresetId((current) => (current === look.id ? null : current));
+      toast({ body: `Deleted “${look.name}”` });
+    },
+    [toast],
+  );
+
+  const handleCopyLink = useCallback(async () => {
+    const url = buildShareUrl({ params, intensity, presetId });
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ body: 'Share link copied' });
+    } catch {
+      // Clipboard access is refused in plenty of contexts. The URL is still
+      // useful, so put it in the address bar for the user to copy by hand
+      // rather than failing silently.
+      window.history.replaceState(null, '', url);
+      toast({ body: 'Could not reach the clipboard. The link is in the address bar.', type: 'error' });
+    }
+  }, [params, intensity, presetId, toast]);
+
+  const handleExportLookFile = useCallback(() => {
+    const name = hasDrifted || !activeParams ? 'Custom look' : activeName;
+    downloadBlob(
+      lookToFile(name, params, intensity),
+      `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.emulsion.json`,
+    );
+  }, [params, intensity, activeName, activeParams, hasDrifted]);
+
+  const handleImportLookFile = useCallback(
+    async (files: FileList | null) => {
+      const file = files?.[0];
+      if (!file) return;
+      try {
+        const parsed = parseLookFile(await file.text());
+        setError(null);
+        setParams(parsed.params);
+        setIntensity(parsed.intensity);
+        setPresetId(null);
+        clearShareParam();
+        toast({ body: `Loaded “${parsed.name}”` });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'That look could not be read.');
+      }
+    },
+    [toast],
+  );
 
   async function handleExport(format: ExportFormat) {
     const pipeline = pipelineRef.current;
@@ -124,6 +253,46 @@ export default function App() {
               e.target.value = '';
             }}
           />
+          <input
+            ref={lookInputRef}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              void handleImportLookFile(e.target.files);
+              e.target.value = '';
+            }}
+          />
+          <DropdownMenu
+            hasChevron={false}
+            alignment="end"
+            button={{
+              label: 'Appearance',
+              icon: <PaletteIcon />,
+              isIconOnly: true,
+              variant: 'ghost',
+              size: 'sm',
+              tooltip: 'Appearance',
+            }}
+            items={[
+              ...THEMES.map((name) => ({
+                id: name,
+                label: `${THEME_LABELS[name]}${name === theme ? '  ·' : ''}`,
+                onClick: () => chooseTheme(name, scheme),
+              })),
+              { id: 'divider', label: '—', isDisabled: true },
+              {
+                id: 'scheme',
+                label: DARK_ONLY_THEMES.includes(theme)
+                  ? 'Light mode (not in Gothic)'
+                  : scheme === 'dark'
+                    ? 'Switch to light'
+                    : 'Switch to dark',
+                isDisabled: DARK_ONLY_THEMES.includes(theme),
+                onClick: () => chooseTheme(theme, scheme === 'dark' ? 'light' : 'dark'),
+              },
+            ]}
+          />
           <IconButton
             label="Open photo"
             icon={<PhotoIcon />}
@@ -184,6 +353,7 @@ export default function App() {
             onPipelineReady={onPipelineReady}
             onFiles={onFiles}
             onPickFile={() => fileInputRef.current?.click()}
+            isDark={isDark}
           />
         }
         end={
@@ -194,6 +364,7 @@ export default function App() {
               setParams(DEFAULT_PARAMS);
               setPresetId(null);
               setIntensity(100);
+              clearShareParam();
             }}
             disabled={!image}
             activePresetId={presetId}
@@ -201,7 +372,17 @@ export default function App() {
             intensity={intensity}
             onApplyPreset={applyPreset}
             onRevertPreset={revertPreset}
-            onIntensityChange={setIntensity}
+            onIntensityChange={(value) => {
+              setIntensity(value);
+              clearShareParam();
+            }}
+            customLooks={customLooks}
+            onApplyCustom={applyCustom}
+            onSaveLook={handleSaveLook}
+            onDeleteLook={handleDeleteLook}
+            onCopyLink={() => void handleCopyLink()}
+            onExportFile={handleExportLookFile}
+            onImportFile={() => lookInputRef.current?.click()}
           />
         }
       />
