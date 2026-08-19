@@ -14,6 +14,21 @@ function srgbToLinear(c: number): number {
 
 type Target = THREE.WebGLRenderTarget;
 
+/** A window onto the image in normalised coordinates: scale 1 with offset 0
+ *  shows the whole frame, scale 0.25 shows a quarter of it. */
+export type RenderView = { scale: number; offsetX: number; offsetY: number };
+
+export const FULL_VIEW: RenderView = { scale: 1, offsetX: 0, offsetY: 0 };
+
+export type RenderOptions = {
+  seed?: number;
+  /** Blend of the finished look back towards the untouched photo. */
+  mix?: number;
+  view?: RenderView;
+  /** Fraction of the width left showing the original. Negative disables it. */
+  split?: number;
+};
+
 export class Pipeline {
   readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
@@ -103,6 +118,9 @@ export class Pipeline {
         uGrainSeed: { value: 0 },
         uAspect: { value: new THREE.Vector2(1, 1) },
         uMix: { value: 1 },
+        uViewScale: { value: new THREE.Vector2(1, 1) },
+        uViewOffset: { value: new THREE.Vector2(0, 0) },
+        uSplit: { value: -1 },
       },
       depthTest: false,
       depthWrite: false,
@@ -181,7 +199,12 @@ export class Pipeline {
     return out;
   }
 
-  private applyParams(p: Params, width: number, height: number, seed: number, mix: number) {
+  private applyParams(
+    p: Params,
+    width: number,
+    height: number,
+    { seed = 0, mix = 1, view = FULL_VIEW, split = -1 }: RenderOptions,
+  ) {
     const u = this.compositeMat.uniforms;
 
     const weights = this.haloWeights(p.halationRadius / 100);
@@ -220,6 +243,10 @@ export class Pipeline {
     u.uGrainSeed.value = seed;
     u.uMix.value = mix;
 
+    (u.uViewScale.value as THREE.Vector2).set(view.scale, view.scale);
+    (u.uViewOffset.value as THREE.Vector2).set(view.offsetX, view.offsetY);
+    u.uSplit.value = split;
+
     const aspect = width / height;
     (u.uAspect.value as THREE.Vector2).set(aspect >= 1 ? aspect : 1, aspect >= 1 ? 1 : 1 / aspect);
 
@@ -228,11 +255,17 @@ export class Pipeline {
     this.thresholdMat.uniforms.uKnee.value = Math.max(0.02, thresholdLinear * 0.55);
   }
 
-  render(params: Params, width: number, height: number, target: Target | null, seed = 0, mix = 1) {
+  render(
+    params: Params,
+    width: number,
+    height: number,
+    target: Target | null,
+    options: RenderOptions = {},
+  ) {
     if (!this.source) return;
 
     this.ensurePyramid(width, height);
-    this.applyParams(params, width, height, seed, mix);
+    this.applyParams(params, width, height, options);
 
     if (params.halationStrength > 0) {
       this.thresholdMat.uniforms.uSource.value = this.source;
@@ -269,12 +302,12 @@ export class Pipeline {
   }
 
   /** Renders at full source resolution and reads the pixels back, top row first. */
+  /** Always renders the whole frame: a zoomed preview must not crop the export. */
   renderToPixels(
     params: Params,
     width: number,
     height: number,
-    seed = 0,
-    mix = 1,
+    options: RenderOptions = {},
   ): Uint8ClampedArray {
     const target = new THREE.WebGLRenderTarget(width, height, {
       type: THREE.UnsignedByteType,
@@ -286,7 +319,7 @@ export class Pipeline {
     });
 
     try {
-      this.render(params, width, height, target, seed, mix);
+      this.render(params, width, height, target, { ...options, view: FULL_VIEW, split: -1 });
       const raw = new Uint8Array(width * height * 4);
       this.renderer.readRenderTargetPixels(target, 0, 0, width, height, raw);
 

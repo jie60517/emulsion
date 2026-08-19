@@ -210,7 +210,9 @@ export default function App() {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     try {
-      const pixels = pipeline.renderToPixels(params, image.width, image.height, 0, intensity / 100);
+      const pixels = pipeline.renderToPixels(params, image.width, image.height, {
+        mix: intensity / 100,
+      });
       const blob = await pixelsToBlob(pixels, image.width, image.height, format);
       downloadBlob(blob, exportFilename(image.name, format));
     } catch (err) {

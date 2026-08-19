@@ -106,6 +106,17 @@ uniform float uGrainSeed;
 uniform vec2 uAspect;
 uniform float uMix;
 
+// Zoom and pan. The threshold pass and the blur pyramid deliberately stay in
+// full-image space, so the halo keeps a fixed size relative to the photograph
+// however far in the view is zoomed — magnifying a crop must magnify the halo
+// with it, not shrink it.
+uniform vec2 uViewScale;
+uniform vec2 uViewOffset;
+
+// Below this fraction of the width the untouched photo shows through. Negative
+// disables the split entirely.
+uniform float uSplit;
+
 varying vec2 vUv;
 ${COLOR_HELPERS}
 
@@ -127,14 +138,16 @@ float vnoise(vec2 p) {
 }
 
 void main() {
-  vec3 base = srgbToLinear(texture2D(uSource, vUv).rgb);
+  vec2 uv = vUv * uViewScale + uViewOffset;
+
+  vec3 base = srgbToLinear(texture2D(uSource, uv).rgb);
   vec3 original = base;
 
-  vec3 halo = texture2D(uHalo0, vUv).rgb * uHaloWeight[0];
-  halo += texture2D(uHalo1, vUv).rgb * uHaloWeight[1];
-  halo += texture2D(uHalo2, vUv).rgb * uHaloWeight[2];
-  halo += texture2D(uHalo3, vUv).rgb * uHaloWeight[3];
-  halo += texture2D(uHalo4, vUv).rgb * uHaloWeight[4];
+  vec3 halo = texture2D(uHalo0, uv).rgb * uHaloWeight[0];
+  halo += texture2D(uHalo1, uv).rgb * uHaloWeight[1];
+  halo += texture2D(uHalo2, uv).rgb * uHaloWeight[2];
+  halo += texture2D(uHalo3, uv).rgb * uHaloWeight[3];
+  halo += texture2D(uHalo4, uv).rgb * uHaloWeight[4];
 
   vec3 lin = base + halo * uHaloTint * uHaloStrength;
   lin *= exp2(uExposure) * uWhiteBalance;
@@ -154,7 +167,9 @@ void main() {
   col = clamp(mix(vec3(l), col, 1.0 + uSaturation), 0.0, 1.0);
 
   if (uGrainStrength > 0.0) {
-    vec2 gp = vUv * uAspect * uGrainScale + uGrainSeed;
+    // Grain rides on image coordinates, so zooming in magnifies the grain the
+    // way a loupe would rather than resampling it finer.
+    vec2 gp = uv * uAspect * uGrainScale + uGrainSeed;
     float n = vnoise(gp) * 0.65 + vnoise(gp * 2.137 + 17.31) * 0.35;
     float gl = luma(col);
     float w = pow(1.0 - gl, 1.35) * (0.35 + 0.65 * smoothstep(0.0, 0.18, gl));
@@ -162,11 +177,16 @@ void main() {
   }
 
   if (uVignette > 0.0) {
-    vec2 q = (vUv - 0.5) * uAspect;
+    vec2 q = (uv - 0.5) * uAspect;
     col *= 1.0 - uVignette * smoothstep(0.30, 0.95, length(q) / max(uAspect.x, uAspect.y));
   }
 
   col = mix(linearToSrgb(original), clamp(col, 0.0, 1.0), uMix);
+
+  if (uSplit >= 0.0 && vUv.x < uSplit) {
+    col = linearToSrgb(original);
+  }
+
   gl_FragColor = vec4(col, 1.0);
 }
 `;
