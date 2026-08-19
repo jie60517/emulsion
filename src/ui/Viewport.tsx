@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Button, EmptyState } from '@astryxdesign/core';
+import { Button, Center, EmptyState } from '@astryxdesign/core';
 import * as THREE from 'three';
 import { Pipeline } from '../render/Pipeline';
 import type { LoadedImage } from '../io/image';
@@ -10,6 +10,13 @@ import { PhotoIcon } from './icons';
  *  keeps a 24MP file interactive, and the effects are resolution-independent so
  *  what you tune here is what you get out. */
 const PREVIEW_MAX = 2048;
+
+/**
+ * The one colour in this app that is deliberately not a theme token. The
+ * surround of the image has to be neutral grey: a tinted background changes how
+ * warm the photo looks and quietly biases every colour decision made against it.
+ */
+const NEUTRAL_SURROUND = '#1a1a1a';
 
 type Props = {
   image: LoadedImage | null;
@@ -105,10 +112,17 @@ export function Viewport({ image, params, onPipelineReady, onFiles, onPickFile }
   }, [image, params, box]);
 
   return (
-    <div
+    <Center
       ref={frameRef}
-      className="viewport"
-      data-dragging={dragging || undefined}
+      axis="both"
+      height="100%"
+      padding={3}
+      style={{
+        background: NEUTRAL_SURROUND,
+        overflow: 'hidden',
+        outline: dragging ? '2px dashed var(--color-border-emphasized)' : undefined,
+        outlineOffset: '-12px',
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
@@ -120,22 +134,15 @@ export function Viewport({ image, params, onPipelineReady, onFiles, onPickFile }
         onFiles(e.dataTransfer.files);
       }}
     >
-      <canvas ref={canvasRef} className="viewport-canvas" hidden={!image} />
+      <canvas ref={canvasRef} hidden={!image} style={{ display: 'block' }} />
       {!image && (
         <EmptyState
           icon={<PhotoIcon style={{ width: '2em', height: '2em' }} />}
           title="Drop a photo to begin"
           description="JPEG, PNG or WebP. Nothing is uploaded — every pixel stays on your machine."
-          actions={
-            <Button
-              label="Open photo"
-              variant="secondary"
-              size="sm"
-              onClick={() => onPickFile()}
-            />
-          }
+          actions={<Button label="Open photo" variant="secondary" size="sm" onClick={onPickFile} />}
         />
       )}
-    </div>
+    </Center>
   );
 }

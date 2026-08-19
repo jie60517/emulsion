@@ -1,20 +1,18 @@
+/*
+ * Everything visual is composed from Astryx components. What remains here is
+ * only what a component cannot express:
+ *
+ * 1. Repointing the theme's font tokens. Astryx names Fustat in its stack but
+ *    ships no font files and no @font-face rule, and Fontsource registers the
+ *    family as "Fustat Variable" — so the tokens have to be aimed at that name
+ *    or the theme silently renders in the system sans. Unlayered, so it beats
+ *    @layer astryx-theme.
+ * 2. Giving the shell a root to fill.
+ */
 :root {
-  /* Astryx names Fustat in its font stack but ships no font files and no
-     @font-face rule at all, so the theme silently falls back to the system sans
-     and stops looking like itself. We self-host the variable font instead of
-     pulling it from a CDN — a static bundle should not need a third-party
-     request to render its own type. Fontsource registers the family as
-     "Fustat Variable", so the theme tokens have to be pointed at that name.
-     These rules are unlayered and therefore beat @layer astryx-theme. */
   --font-family-body: 'Fustat Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     Helvetica, Arial, sans-serif;
   --font-family-heading: var(--font-family-body);
-
-  /* The one colour in this app that is deliberately NOT a theme token. The
-     surround of the image has to be neutral grey: a tinted background shifts
-     how warm the photo looks and quietly biases every colour decision made
-     against it. */
-  --viewport-surround: #1a1a1a;
 }
 
 html,
@@ -25,117 +23,4 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-background-body);
-  color: var(--color-text-primary);
-  font-family: var(--font-family-body);
-  -webkit-font-smoothing: antialiased;
-}
-
-.brand {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.workspace {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  height: 100%;
-}
-
-.viewport {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: var(--viewport-surround);
-  overflow: hidden;
-}
-
-.viewport[data-dragging] {
-  outline: 2px dashed var(--color-border-emphasized);
-  outline-offset: -12px;
-}
-
-.viewport-canvas {
-  display: block;
-  max-width: 100%;
-  max-height: 100%;
-}
-
-.panel {
-  width: 300px;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-background-card);
-  border-left: 1px solid var(--color-border);
-  min-height: 0;
-}
-
-.panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--color-border);
-  flex: none;
-}
-
-.panel-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 16px 24px;
-}
-
-.panel-group {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 6px 0 16px;
-}
-
-.panel-group-trigger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Count of moved sliders in a collapsed group. */
-.panel-group-trigger > :nth-child(2) {
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: var(--color-background-muted);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 860px) {
-  .workspace {
-    flex-direction: column;
-  }
-
-  .viewport {
-    padding: 12px;
-    min-height: 40vh;
-  }
-
-  .panel {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid var(--color-border);
-    max-height: 50vh;
-  }
 }

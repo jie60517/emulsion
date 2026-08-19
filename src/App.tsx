@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { AppShell, Banner, DropdownMenu, IconButton, Text, TopNav } from '@astryxdesign/core';
+import { AppShell, Banner, DropdownMenu, IconButton, Layout, Stack, Text, TopNav } from '@astryxdesign/core';
 import { Viewport } from './ui/Viewport';
 import { ControlPanel } from './ui/ControlPanel';
 import { Pipeline } from './render/Pipeline';
@@ -81,17 +81,17 @@ export default function App() {
     <TopNav
       label="Emulsion"
       heading={
-        <span className="brand">
+        <Stack direction="horizontal" gap={1.5} align="center">
           <Text type="label" weight="semibold">
             Emulsion
           </Text>
           <Text type="supporting" color="secondary">
             Cinestill 800T halation
           </Text>
-        </span>
+        </Stack>
       }
       endContent={
-        <span className="topbar-actions">
+        <Stack direction="horizontal" gap={1} align="center">
           {image && (
             <Text type="supporting" color="secondary">
               {image.name} · {image.width}&#215;{image.height}
@@ -135,7 +135,7 @@ export default function App() {
               { id: 'png', label: 'Export PNG', onClick: () => void handleExport('png') },
             ]}
           />
-        </span>
+        </Stack>
       }
     />
   );
@@ -156,21 +156,27 @@ export default function App() {
         ) : undefined
       }
     >
-      <div className="workspace">
-        <Viewport
-          image={image}
-          params={params}
-          onPipelineReady={onPipelineReady}
-          onFiles={onFiles}
-          onPickFile={() => fileInputRef.current?.click()}
-        />
-        <ControlPanel
-          params={params}
-          onChange={setParam}
-          onReset={() => setParams(DEFAULT_PARAMS)}
-          disabled={!image}
-        />
-      </div>
+      <Layout
+        height="fill"
+        padding={0}
+        content={
+          <Viewport
+            image={image}
+            params={params}
+            onPipelineReady={onPipelineReady}
+            onFiles={onFiles}
+            onPickFile={() => fileInputRef.current?.click()}
+          />
+        }
+        end={
+          <ControlPanel
+            params={params}
+            onChange={setParam}
+            onReset={() => setParams(DEFAULT_PARAMS)}
+            disabled={!image}
+          />
+        }
+      />
     </AppShell>
   );
 }
