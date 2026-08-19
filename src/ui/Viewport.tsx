@@ -8,7 +8,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { Toolbar } from '@astryxdesign/core/Toolbar';
 import * as THREE from 'three';
-import { Pipeline, type RenderView } from '../render/Pipeline';
+import { Pipeline, type Histogram, type RenderView } from '../render/Pipeline';
 import type { LoadedImage } from '../io/image';
 import type { Params } from '../state/params';
 import { PhotoIcon } from './icons';
@@ -38,6 +38,7 @@ type Props = {
   onFiles: (files: FileList | null) => void;
   onPickFile: () => void;
   isDark: boolean;
+  onHistogram: (histogram: Histogram | null) => void;
 };
 
 export function Viewport({
@@ -48,6 +49,7 @@ export function Viewport({
   onFiles,
   onPickFile,
   isDark,
+  onHistogram,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -62,6 +64,8 @@ export function Viewport({
   const [compare, setCompare] = useState(false);
   const [isSplit, setIsSplit] = useState(false);
   const [render, setRender] = useState({ width: 0, height: 0, cssWidth: 0, cssHeight: 0 });
+  const [isTilt, setIsTilt] = useState(true);
+  const [pointer, setPointer] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     if (!canvasRef.current || pipelineRef.current) return;
@@ -154,15 +158,38 @@ export function Viewport({
     };
   }, [zoom, centre]);
 
+  // Depth is decoration, and decoration yields to judgement: the moment the
+  // image is being inspected at zoom, compared, or split, the plane goes flat.
+  const tilt = isTilt && zoom === 1 && !isSplit && !compare ? pointer : null;
+
   useEffect(() => {
     const pipeline = pipelineRef.current;
     if (!pipeline || !image || !render.width) return;
+    pipeline.setBackground(isDark ? NEUTRAL_SURROUND_DARK : NEUTRAL_SURROUND_LIGHT);
     pipeline.render(params, render.width, render.height, null, {
       mix: compare ? 0 : intensity / 100,
       view,
       split: isSplit ? 0.5 : -1,
+      tilt,
     });
-  }, [image, params, intensity, render, view, compare, isSplit]);
+  }, [image, params, intensity, render, view, compare, isSplit, tilt, isDark]);
+
+  // Measured off the main render, and debounced: dragging a slider should not
+  // stall on a GPU readback for every intermediate value.
+  useEffect(() => {
+    const pipeline = pipelineRef.current;
+    if (!pipeline || !image || !render.width) {
+      onHistogram(null);
+      return;
+    }
+    const id = setTimeout(() => {
+      const height = Math.max(1, Math.round((192 * render.height) / render.width));
+      onHistogram(
+        pipeline.readHistogram(params, 192, height, { mix: intensity / 100, view }),
+      );
+    }, 140);
+    return () => clearTimeout(id);
+  }, [image, params, intensity, render, view, onHistogram]);
 
   /** Zoom at which one image pixel covers one device pixel. */
   const nativeZoom = useMemo(
@@ -222,6 +249,13 @@ export function Viewport({
           endContent={
             <>
               <ToggleButton
+                label="Depth"
+                size="sm"
+                isPressed={isTilt}
+                isDisabled={!hasImage}
+                onPressedChange={setIsTilt}
+              />
+              <ToggleButton
                 label="Split"
                 size="sm"
                 isPressed={isSplit}
@@ -279,7 +313,18 @@ export function Viewport({
           }}
           onPointerMove={(e) => {
             const pan = panRef.current;
-            if (!pan || !render.cssWidth) return;
+            if (!pan) {
+              const rect = e.currentTarget.getBoundingClientRect();
+              // Quantised, so a mouse crossing the frame does not queue a full
+              // pipeline render for every pixel it passes over.
+              const q = (v: number) => Math.round(v * 50) / 50;
+              setPointer({
+                x: q(((e.clientX - rect.left) / rect.width) * 2 - 1),
+                y: q(((e.clientY - rect.top) / rect.height) * 2 - 1),
+              });
+              return;
+            }
+            if (!render.cssWidth) return;
             const scale = 1 / zoom;
             setCentre({
               x: pan.cx - ((e.clientX - pan.x) / render.cssWidth) * scale,
@@ -289,6 +334,7 @@ export function Viewport({
           onPointerUp={() => {
             panRef.current = null;
           }}
+          onPointerLeave={() => setPointer({ x: 0, y: 0 })}
         >
           <canvas ref={canvasRef} hidden={!image} style={{ display: 'block' }} />
           {!image && (

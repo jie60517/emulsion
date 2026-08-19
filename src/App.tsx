@@ -9,7 +9,7 @@ import { TopNav } from '@astryxdesign/core/TopNav';
 import { useToast } from '@astryxdesign/core/Toast';
 import { Viewport } from './ui/Viewport';
 import { ControlPanel } from './ui/ControlPanel';
-import { Pipeline } from './render/Pipeline';
+import { Pipeline, type Histogram } from './render/Pipeline';
 import { DownloadIcon, PaletteIcon, PhotoIcon } from './ui/icons';
 import {
   ACCEPTED_TYPES,
@@ -62,6 +62,7 @@ export default function App() {
   const [presetId, setPresetId] = useState<string | null>(SHARED?.presetId ?? null);
   const [intensity, setIntensity] = useState(SHARED?.intensity ?? 100);
   const [customLooks, setCustomLooks] = useState<CustomLook[]>(() => loadCustomLooks());
+  const [histogram, setHistogram] = useState<Histogram | null>(null);
   const [theme] = useState<ThemeName>(() => loadTheme());
   const [scheme] = useState<SchemeName>(() => loadScheme());
 
@@ -348,6 +349,7 @@ export default function App() {
             onFiles={onFiles}
             onPickFile={() => fileInputRef.current?.click()}
             isDark={isDark}
+            onHistogram={setHistogram}
           />
         }
         end={
@@ -377,6 +379,7 @@ export default function App() {
             onCopyLink={() => void handleCopyLink()}
             onExportFile={handleExportLookFile}
             onImportFile={() => lookInputRef.current?.click()}
+            histogram={histogram}
           />
         }
       />

@@ -20,6 +20,9 @@ export type RenderView = { scale: number; offsetX: number; offsetY: number };
 
 export const FULL_VIEW: RenderView = { scale: 1, offsetX: 0, offsetY: 0 };
 
+/** 256 bins per channel, counted from what the viewer is actually looking at. */
+export type Histogram = { r: Uint32Array; g: Uint32Array; b: Uint32Array; peak: number };
+
 export type RenderOptions = {
   seed?: number;
   /** Blend of the finished look back towards the untouched photo. */
@@ -27,7 +30,19 @@ export type RenderOptions = {
   view?: RenderView;
   /** Fraction of the width left showing the original. Negative disables it. */
   split?: number;
+  /**
+   * Pointer position in -1..1, which tilts the image as a plane in space. Only
+   * honoured when drawing to the canvas, and the caller is expected to withhold
+   * it whenever the image is being judged rather than admired — a tilted plane
+   * resamples the picture and cannot be trusted at 1:1.
+   */
+  tilt?: { x: number; y: number } | null;
 };
+
+/** Kept small on purpose. Past a couple of degrees the parallax stops reading as
+ *  depth and starts reading as a mistake. */
+const MAX_TILT = 0.032;
+const PLANE_FILL = 0.94;
 
 export class Pipeline {
   readonly renderer: THREE.WebGLRenderer;
@@ -47,6 +62,11 @@ export class Pipeline {
 
   private source: THREE.Texture | null = null;
 
+  private presentTarget: Target | null = null;
+  private readonly presentScene = new THREE.Scene();
+  private readonly presentCamera = new THREE.PerspectiveCamera(28, 1, 0.1, 10);
+  private readonly presentMesh: THREE.Mesh;
+
   constructor(canvas?: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -63,6 +83,13 @@ export class Pipeline {
     const geometry = new THREE.PlaneGeometry(2, 2);
     this.quad = new THREE.Mesh(geometry);
     this.scene.add(this.quad);
+
+    this.presentCamera.position.z = 3;
+    this.presentMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({ toneMapped: false }),
+    );
+    this.presentScene.add(this.presentMesh);
 
     this.thresholdMat = new THREE.ShaderMaterial({
       vertexShader: VERT,
@@ -125,6 +152,18 @@ export class Pipeline {
       depthTest: false,
       depthWrite: false,
     });
+  }
+
+  /** The colour behind the tilted plane. Matches the viewport surround so the
+   *  picture reads as floating on it rather than on a black hole. */
+  setBackground(colour: string) {
+    // The renderer's output space is linear-through, so the clear colour must be
+    // handed over already-encoded. Letting three convert it from sRGB would put
+    // #1a1a1a on screen as rgb(3,3,3).
+    this.renderer.setClearColor(
+      new THREE.Color().setStyle(colour, THREE.LinearSRGBColorSpace),
+      1,
+    );
   }
 
   setSource(texture: THREE.Texture | null) {
@@ -297,8 +336,49 @@ export class Pipeline {
     }
 
     this.renderer.setSize(width, height, false);
-    this.blit(this.compositeMat, target);
+
+    const tilt = options.tilt;
+    if (target === null && tilt) {
+      this.presentTilted(width, height, tilt);
+    } else {
+      this.blit(this.compositeMat, target);
+    }
     this.renderer.setRenderTarget(null);
+  }
+
+  /** Composites offscreen, then draws that as a plane under a perspective
+   *  camera so the picture sits in space rather than flat against the glass. */
+  private presentTilted(width: number, height: number, tilt: { x: number; y: number }) {
+    if (!this.presentTarget || this.presentTarget.width !== width || this.presentTarget.height !== height) {
+      this.presentTarget?.dispose();
+      this.presentTarget = new THREE.WebGLRenderTarget(width, height, {
+        type: THREE.UnsignedByteType,
+        format: THREE.RGBAFormat,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        depthBuffer: false,
+        stencilBuffer: false,
+      });
+    }
+
+    this.blit(this.compositeMat, this.presentTarget);
+
+    const aspect = width / height;
+    this.presentCamera.aspect = aspect;
+    this.presentCamera.updateProjectionMatrix();
+
+    const visibleHeight =
+      2 * this.presentCamera.position.z * Math.tan((this.presentCamera.fov * Math.PI) / 360);
+    this.presentMesh.scale.set(visibleHeight * aspect * PLANE_FILL, visibleHeight * PLANE_FILL, 1);
+    this.presentMesh.rotation.set(-tilt.y * MAX_TILT, tilt.x * MAX_TILT, 0);
+
+    const material = this.presentMesh.material as THREE.MeshBasicMaterial;
+    material.map = this.presentTarget.texture;
+    material.needsUpdate = true;
+
+    this.renderer.setRenderTarget(null);
+    this.renderer.clear();
+    this.renderer.render(this.presentScene, this.presentCamera);
   }
 
   /** Renders at full source resolution and reads the pixels back, top row first. */
@@ -337,8 +417,58 @@ export class Pipeline {
     }
   }
 
+  /**
+   * Bins the composited result. Deliberately measured from a small render of the
+   * current view rather than the full frame: a histogram is about distribution,
+   * and 24k samples settle it while staying cheap enough to run on every edit.
+   */
+  readHistogram(
+    params: Params,
+    width: number,
+    height: number,
+    options: RenderOptions = {},
+  ): Histogram | null {
+    if (!this.source) return null;
+
+    const target = new THREE.WebGLRenderTarget(width, height, {
+      type: THREE.UnsignedByteType,
+      format: THREE.RGBAFormat,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      depthBuffer: false,
+      stencilBuffer: false,
+    });
+
+    try {
+      this.render(params, width, height, target, options);
+      const pixels = new Uint8Array(width * height * 4);
+      this.renderer.readRenderTargetPixels(target, 0, 0, width, height, pixels);
+
+      const r = new Uint32Array(256);
+      const g = new Uint32Array(256);
+      const b = new Uint32Array(256);
+      for (let i = 0; i < pixels.length; i += 4) {
+        r[pixels[i]]++;
+        g[pixels[i + 1]]++;
+        b[pixels[i + 2]]++;
+      }
+
+      let peak = 1;
+      for (let i = 0; i < 256; i++) {
+        peak = Math.max(peak, r[i], g[i], b[i]);
+      }
+      return { r, g, b, peak };
+    } finally {
+      target.dispose();
+      this.disposePyramid();
+    }
+  }
+
   dispose() {
     this.disposePyramid();
+    this.presentTarget?.dispose();
+    this.presentMesh.geometry.dispose();
+    (this.presentMesh.material as THREE.Material).dispose();
     this.thresholdMat.dispose();
     this.downsampleMat.dispose();
     this.blurMat.dispose();

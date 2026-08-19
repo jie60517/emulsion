@@ -12,9 +12,11 @@ import {
   type ParamSpec,
   type Params,
 } from '../state/params';
+import { Histogram } from './Histogram';
 import { PresetPicker } from './PresetPicker';
 import type { Preset } from '../state/presets';
 import type { CustomLook } from '../state/persistence';
+import type { Histogram as HistogramData } from '../render/Pipeline';
 
 type Props = {
   params: Params;
@@ -34,6 +36,7 @@ type Props = {
   onCopyLink: () => void;
   onExportFile: () => void;
   onImportFile: () => void;
+  histogram: HistogramData | null;
 };
 
 const GROUP_ORDER: ParamSpec['group'][] = ['halation', 'grain', 'colour', 'tone'];
@@ -60,6 +63,7 @@ export function ControlPanel({
   onCopyLink,
   onExportFile,
   onImportFile,
+  histogram,
 }: Props) {
   const isDefault = PARAM_SPECS.every((spec) => params[spec.key] === spec.neutral);
 
@@ -79,6 +83,8 @@ export function ControlPanel({
       </LayoutHeader>
 
       <VStack gap={0} padding={2}>
+        <Histogram data={histogram} />
+
         <Collapsible
           defaultIsOpen
           trigger={

@@ -7,9 +7,14 @@ Live: https://jie60517.github.io/emulsion/
 
 ## Status
 
-**Stage 1 of 4 — photo pipeline.** Photos load, grade and export at full
-resolution. Presets, comparison tools, the video pipeline and batch processing
-land in later stages.
+**Stages 1 and 2 of 4 complete.** Photos load, grade and export at full
+resolution. Eight built-in looks with an intensity blend, custom looks saved to
+the browser, shareable URLs and .json import/export. Zoom to 1:1, pan,
+hold-to-compare, split view, live histogram, and a parallax presentation that
+switches itself off whenever the image is being judged rather than admired.
+
+Stage 3 is the video pipeline; stage 4 is batch processing and the mobile
+layout.
 
 ## How the halation works
 
