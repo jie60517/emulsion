@@ -9,6 +9,7 @@ import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { Toolbar } from '@astryxdesign/core/Toolbar';
 import * as THREE from 'three';
 import { Pipeline, type Histogram, type RenderView } from '../render/Pipeline';
+import { chainFromLegacyParams } from '../render/effects';
 import type { LoadedImage } from '../io/image';
 import type { Params } from '../state/params';
 import { PhotoIcon } from './icons';
@@ -185,7 +186,10 @@ export function Viewport({
     const id = setTimeout(() => {
       const height = Math.max(1, Math.round((192 * render.height) / render.width));
       onHistogram(
-        pipeline.readHistogram(params, 192, height, { mix: intensity / 100, view }),
+        pipeline.readHistogram(chainFromLegacyParams(params), 192, height, {
+          mix: intensity / 100,
+          view,
+        }),
       );
     }, 140);
     return () => clearTimeout(id);

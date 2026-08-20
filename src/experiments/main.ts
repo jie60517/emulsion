@@ -1,12 +1,10 @@
 import { runSpike, type SpikeResult } from './webcodecs-spike';
-import { setPyramidBaseShift } from '../render/Pipeline';
 import { DEFAULT_PARAMS } from '../state/params';
 import { PRESETS } from '../state/presets';
 
 declare global {
   interface Window {
     runSpikes: (frames?: number) => Promise<SpikeResult[]>;
-    runPyramidSweep: (frames?: number) => Promise<SpikeResult[]>;
     runCostBreakdown: (frames?: number) => Promise<SpikeResult[]>;
   }
 }
@@ -23,19 +21,6 @@ window.runSpikes = async (frames = 45) => {
     results.push(await runSpike(w, h, frames, label));
     out.textContent = JSON.stringify(results, null, 2);
   }
-  return results;
-};
-
-window.runPyramidSweep = async (frames = 45) => {
-  const results: SpikeResult[] = [];
-  for (const shift of [1, 2, 3]) {
-    setPyramidBaseShift(shift);
-    out.textContent = `4K, pyramid base 1/${2 ** shift}...`;
-    const r = await runSpike(3840, 2160, frames, `4K pyramid 1/${2 ** shift}`);
-    results.push(r);
-    out.textContent = JSON.stringify(results, null, 2);
-  }
-  setPyramidBaseShift(1);
   return results;
 };
 

@@ -10,6 +10,7 @@ import { useToast } from '@astryxdesign/core/Toast';
 import { Viewport } from './ui/Viewport';
 import { ControlPanel } from './ui/ControlPanel';
 import { Pipeline, type Histogram } from './render/Pipeline';
+import { chainFromLegacyParams } from './render/effects';
 import { DownloadIcon, PaletteIcon, PhotoIcon } from './ui/icons';
 import {
   ACCEPTED_TYPES,
@@ -211,9 +212,12 @@ export default function App() {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     try {
-      const pixels = pipeline.renderToPixels(params, image.width, image.height, {
-        mix: intensity / 100,
-      });
+      const pixels = pipeline.renderToPixels(
+        chainFromLegacyParams(params),
+        image.width,
+        image.height,
+        { mix: intensity / 100 },
+      );
       const blob = await pixelsToBlob(pixels, image.width, image.height, format);
       downloadBlob(blob, exportFilename(image.name, format));
     } catch (err) {

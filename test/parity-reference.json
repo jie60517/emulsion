@@ -1,0 +1,11 @@
+{
+  "note": "Baseline for the effect-chain engine. Sample points are pixel coordinates in public/sample/night-test.png, exported at full resolution. Neutral matches the previous fixed pipeline exactly (delta 0). The halation presets deliberately do NOT match it: the old pipeline sampled the blur pyramid with image-space coordinates although it had been written in framebuffer space, which mirrored the halo vertically. A column probe through the neon bar (source rows 300-372) now peaks at row 350 and falls off symmetrically — 34, 73, 188, 255, 167, 88, 35, 18 — so the halo sits on the light source.",
+  "samplePoints": [[640,336],[640,288],[640,240],[120,120],[1290,160],[800,940],[400,600],[1500,900]],
+  "presets": {
+    "neutral":    [[255,226,176],[15,19,31],[16,19,32],[17,20,34],[16,20,33],[128,128,128],[13,16,27],[11,12,17]],
+    "800t-night": [[255,253,205],[128,56,48],[43,27,40],[19,22,37],[50,31,42],[139,135,139],[16,19,31],[54,23,23]],
+    "cold-steel": [[241,224,197],[49,33,38],[25,25,33],[22,25,33],[25,25,33],[122,126,128],[19,21,28],[25,20,23]],
+    "tri-x-mono": [[243,243,243],[39,39,39],[14,14,14],[15,15,15],[20,20,20],[131,131,131],[13,13,13],[16,16,16]],
+    "soft-bloom": [[255,255,201],[150,70,44],[62,24,32],[17,20,34],[62,30,34],[154,143,140],[13,16,27],[78,33,23]]
+  }
+}
