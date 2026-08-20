@@ -10,7 +10,6 @@ import { useToast } from '@astryxdesign/core/Toast';
 import { Viewport } from './ui/Viewport';
 import { ControlPanel } from './ui/ControlPanel';
 import { Pipeline, type Histogram } from './render/Pipeline';
-import { chainFromLegacyParams } from './render/effects';
 import { DownloadIcon, PaletteIcon, PhotoIcon } from './ui/icons';
 import {
   ACCEPTED_TYPES,
@@ -21,8 +20,14 @@ import {
   type ExportFormat,
   type LoadedImage,
 } from './io/image';
-import { DEFAULT_PARAMS, PARAM_SPECS, type ParamKey, type Params } from './state/params';
 import { findPreset, type Preset } from './state/presets';
+import {
+  chainFromLegacyParams,
+  defaultChain,
+  makeNode,
+  type ChainNode,
+} from './render/effects';
+import { chainsEqual, isChainNeutral, moveNode } from './state/chain';
 import {
   DARK_ONLY_THEMES,
   THEMES,
@@ -51,13 +56,9 @@ import {
  *  first render, and re-parsing it inside every state initialiser is waste. */
 const SHARED = decodeShareState(window.location.search);
 
-function paramsEqual(a: Params, b: Params): boolean {
-  return PARAM_SPECS.every((spec) => a[spec.key] === b[spec.key]);
-}
-
 export default function App() {
   const [image, setImage] = useState<LoadedImage | null>(null);
-  const [params, setParams] = useState<Params>(SHARED?.params ?? DEFAULT_PARAMS);
+  const [chain, setChain] = useState<ChainNode[]>(SHARED?.chain ?? defaultChain());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<ExportFormat | null>(null);
   const [presetId, setPresetId] = useState<string | null>(SHARED?.presetId ?? null);
@@ -97,49 +98,77 @@ export default function App() {
     }
   }, []);
 
-  const setParam = useCallback((key: ParamKey, value: number) => {
-    setParams((previous) => ({ ...previous, [key]: value }));
+  const setValue = useCallback((nodeId: string, key: string, value: number) => {
+    setChain((previous) =>
+      previous.map((node) =>
+        node.nodeId === nodeId ? { ...node, values: { ...node.values, [key]: value } } : node,
+      ),
+    );
     // The URL described a look that no longer matches what is on screen.
     clearShareParam();
   }, []);
 
+  const setEnabled = useCallback((nodeId: string, enabled: boolean) => {
+    setChain((previous) =>
+      previous.map((node) => (node.nodeId === nodeId ? { ...node, enabled } : node)),
+    );
+    clearShareParam();
+  }, []);
+
+  const moveEffect = useCallback((nodeId: string, delta: number) => {
+    setChain((previous) => moveNode(previous, nodeId, delta));
+    clearShareParam();
+  }, []);
+
+  const removeEffect = useCallback((nodeId: string) => {
+    setChain((previous) => previous.filter((node) => node.nodeId !== nodeId));
+    clearShareParam();
+  }, []);
+
+  const addEffect = useCallback((effectId: string) => {
+    const node = makeNode(effectId);
+    if (!node) return;
+    setChain((previous) => [...previous, node]);
+    clearShareParam();
+  }, []);
+
   const applyPreset = useCallback((preset: Preset) => {
-    setParams(preset.params);
+    setChain(chainFromLegacyParams(preset.params));
     setPresetId(preset.id);
     clearShareParam();
   }, []);
 
   const applyCustom = useCallback((look: CustomLook) => {
-    setParams(look.params);
+    setChain(look.chain);
     setPresetId(look.id);
     clearShareParam();
   }, []);
 
   // The applied look stays highlighted after manual edits, but says so — a
   // highlighted preset that no longer describes the image is a lie.
-  const activeParams =
-    findPreset(presetId)?.params ??
-    customLooks.find((look) => look.id === presetId)?.params ??
-    null;
-  const hasDrifted = activeParams !== null && !paramsEqual(params, activeParams);
+  const preset = findPreset(presetId);
+  const activeChain = preset
+    ? chainFromLegacyParams(preset.params)
+    : (customLooks.find((look) => look.id === presetId)?.chain ?? null);
+  const hasDrifted = activeChain !== null && !chainsEqual(chain, activeChain);
   const activeName =
-    findPreset(presetId)?.name ??
+    preset?.name ??
     customLooks.find((look) => look.id === presetId)?.name ??
     'Custom look';
 
   const revertPreset = useCallback(() => {
-    if (activeParams) setParams(activeParams);
-  }, [activeParams]);
+    if (activeChain) setChain(activeChain);
+  }, [activeChain]);
 
   const handleSaveLook = useCallback(
     (name: string) => {
-      const saved = saveCustomLook(name, params);
+      const saved = saveCustomLook(name, chain);
       setCustomLooks(saved);
       const match = saved.find((look) => look.name.toLowerCase() === name.trim().toLowerCase());
       if (match) setPresetId(match.id);
       toast({ body: `Saved ${name.trim()}` });
     },
-    [params, toast],
+    [chain, toast],
   );
 
   const handleDeleteLook = useCallback(
@@ -152,7 +181,7 @@ export default function App() {
   );
 
   const handleCopyLink = useCallback(async () => {
-    const url = buildShareUrl({ params, intensity, presetId });
+    const url = buildShareUrl({ chain, intensity, presetId });
     try {
       await navigator.clipboard.writeText(url);
       toast({ body: 'Share link copied' });
@@ -163,15 +192,15 @@ export default function App() {
       window.history.replaceState(null, '', url);
       toast({ body: 'Clipboard blocked. Link is in the address bar.', type: 'error' });
     }
-  }, [params, intensity, presetId, toast]);
+  }, [chain, intensity, presetId, toast]);
 
   const handleExportLookFile = useCallback(() => {
-    const name = hasDrifted || !activeParams ? 'Custom look' : activeName;
+    const name = hasDrifted || !activeChain ? 'Custom look' : activeName;
     downloadBlob(
-      lookToFile(name, params, intensity),
+      lookToFile(name, chain, intensity),
       `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.emulsion.json`,
     );
-  }, [params, intensity, activeName, activeParams, hasDrifted]);
+  }, [chain, intensity, activeName, activeChain, hasDrifted]);
 
   const handleImportLookFile = useCallback(
     async (files: FileList | null) => {
@@ -180,7 +209,7 @@ export default function App() {
       try {
         const parsed = parseLookFile(await file.text());
         setError(null);
-        setParams(parsed.params);
+        setChain(parsed.chain);
         setIntensity(parsed.intensity);
         setPresetId(null);
         clearShareParam();
@@ -212,12 +241,9 @@ export default function App() {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     try {
-      const pixels = pipeline.renderToPixels(
-        chainFromLegacyParams(params),
-        image.width,
-        image.height,
-        { mix: intensity / 100 },
-      );
+      const pixels = pipeline.renderToPixels(chain, image.width, image.height, {
+        mix: intensity / 100,
+      });
       const blob = await pixelsToBlob(pixels, image.width, image.height, format);
       downloadBlob(blob, exportFilename(image.name, format));
     } catch (err) {
@@ -347,7 +373,7 @@ export default function App() {
         content={
           <Viewport
             image={image}
-            params={params}
+            chain={chain}
             intensity={intensity}
             onPipelineReady={onPipelineReady}
             onFiles={onFiles}
@@ -358,10 +384,15 @@ export default function App() {
         }
         end={
           <ControlPanel
-            params={params}
-            onChange={setParam}
+            chain={chain}
+            isDefault={isChainNeutral(chain)}
+            onValueChange={setValue}
+            onToggle={setEnabled}
+            onMove={moveEffect}
+            onRemove={removeEffect}
+            onAdd={addEffect}
             onReset={() => {
-              setParams(DEFAULT_PARAMS);
+              setChain(defaultChain());
               setPresetId(null);
               setIntensity(100);
               clearShareParam();

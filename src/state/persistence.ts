@@ -1,31 +1,24 @@
-import { DEFAULT_PARAMS, PARAM_SPECS, clampParams, type Params } from './params';
+import { PARAM_SPECS, clampParams, type Params } from './params';
+import { deserialiseChain, serialiseChain } from './chain';
+import { chainFromLegacyParams, type ChainNode } from '../render/effects';
 
 export type CustomLook = {
   id: string;
   name: string;
-  params: Params;
+  chain: ChainNode[];
   savedAt: number;
 };
 
 export type SharedState = {
-  params: Params;
+  chain: ChainNode[];
   intensity: number;
   presetId: string | null;
 };
 
-const STORAGE_KEY = 'emulsion.custom-looks.v1';
+const STORAGE_KEY = 'emulsion.custom-looks.v2';
+const LEGACY_STORAGE_KEY = 'emulsion.custom-looks.v1';
 const SHARE_PARAM = 'look';
 const FILE_KIND = 'emulsion.look';
-
-/** Only the parameters that differ from neutral are worth carrying, which keeps
- *  a shared URL short enough to paste into a message. */
-function sparse(params: Params): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const spec of PARAM_SPECS) {
-    if (params[spec.key] !== spec.neutral) out[spec.key] = params[spec.key];
-  }
-  return out;
-}
 
 function base64UrlEncode(text: string): string {
   const bytes = new TextEncoder().encode(text);
@@ -44,7 +37,7 @@ function base64UrlDecode(text: string): string {
 export function encodeShareState(state: SharedState): string {
   return base64UrlEncode(
     JSON.stringify({
-      p: sparse(state.params),
+      c: serialiseChain(state.chain),
       i: state.intensity,
       k: state.presetId ?? undefined,
     }),
@@ -61,17 +54,13 @@ export function decodeShareState(search: string): SharedState | null {
 
   try {
     const raw = JSON.parse(base64UrlDecode(encoded)) as {
+      c?: unknown;
       p?: Record<string, unknown>;
       i?: unknown;
       k?: unknown;
     };
-    const numbers: Partial<Params> = {};
-    for (const spec of PARAM_SPECS) {
-      const value = raw.p?.[spec.key];
-      if (typeof value === 'number') numbers[spec.key] = value;
-    }
     return {
-      params: clampParams(numbers),
+      chain: readChain(raw.c, raw.p),
       intensity: typeof raw.i === 'number' ? Math.min(100, Math.max(0, raw.i)) : 100,
       presetId: typeof raw.k === 'string' ? raw.k : null,
     };
@@ -95,16 +84,34 @@ export function clearShareParam() {
   window.history.replaceState(null, '', url.toString());
 }
 
+/** Accepts either the chain format or the flat parameter set that preceded it,
+ *  so links and files written before effects became reorderable still open. */
+function readChain(chain: unknown, legacy: unknown): ChainNode[] {
+  const parsed = deserialiseChain(chain);
+  if (parsed) return parsed;
+
+  const numbers: Partial<Params> = {};
+  const source = (legacy || {}) as Record<string, unknown>;
+  for (const spec of PARAM_SPECS) {
+    const value = source[spec.key];
+    if (typeof value === 'number') numbers[spec.key] = value;
+  }
+  return chainFromLegacyParams(clampParams(numbers));
+}
+
 export function loadCustomLooks(): CustomLook[] {
   try {
-    const raw = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '[]') as unknown;
+    const stored =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    const raw = JSON.parse(stored ?? '[]') as unknown;
     if (!Array.isArray(raw)) return [];
     return raw
       .filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
       .map((entry) => ({
         id: String(entry.id ?? ''),
         name: String(entry.name ?? 'Untitled'),
-        params: clampParams((entry.params ?? {}) as Partial<Params>),
+        chain: readChain(entry.chain, entry.params),
         savedAt: typeof entry.savedAt === 'number' ? entry.savedAt : 0,
       }))
       .filter((look) => look.id !== '');
@@ -116,7 +123,17 @@ export function loadCustomLooks(): CustomLook[] {
 
 function persist(looks: CustomLook[]): CustomLook[] {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(looks));
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(
+        looks.map((look) => ({
+          id: look.id,
+          name: look.name,
+          savedAt: look.savedAt,
+          chain: serialiseChain(look.chain),
+        })),
+      ),
+    );
   } catch {
     // Private browsing and full quotas both throw here. The look still applies
     // for this session; only its persistence is lost.
@@ -124,7 +141,7 @@ function persist(looks: CustomLook[]): CustomLook[] {
   return looks;
 }
 
-export function saveCustomLook(name: string, params: Params): CustomLook[] {
+export function saveCustomLook(name: string, chain: ChainNode[]): CustomLook[] {
   const trimmed = name.trim() || 'Untitled';
   const existing = loadCustomLooks();
   const match = existing.find((look) => look.name.toLowerCase() === trimmed.toLowerCase());
@@ -132,14 +149,14 @@ export function saveCustomLook(name: string, params: Params): CustomLook[] {
   if (match) {
     return persist(
       existing.map((look) =>
-        look.id === match.id ? { ...look, params, savedAt: Date.now() } : look,
+        look.id === match.id ? { ...look, chain, savedAt: Date.now() } : look,
       ),
     );
   }
 
   return persist([
     ...existing,
-    { id: `custom-${Date.now().toString(36)}`, name: trimmed, params, savedAt: Date.now() },
+    { id: `custom-${Date.now().toString(36)}`, name: trimmed, chain, savedAt: Date.now() },
   ]);
 }
 
@@ -147,11 +164,11 @@ export function deleteCustomLook(id: string): CustomLook[] {
   return persist(loadCustomLooks().filter((look) => look.id !== id));
 }
 
-export function lookToFile(name: string, params: Params, intensity: number): Blob {
+export function lookToFile(name: string, chain: ChainNode[], intensity: number): Blob {
   return new Blob(
     [
       JSON.stringify(
-        { kind: FILE_KIND, version: 1, name, intensity, params: sparse(params) },
+        { kind: FILE_KIND, version: 2, name, intensity, chain: serialiseChain(chain) },
         null,
         2,
       ),
@@ -160,14 +177,20 @@ export function lookToFile(name: string, params: Params, intensity: number): Blo
   );
 }
 
-export type ParsedLookFile = { name: string; params: Params; intensity: number };
+export type ParsedLookFile = { name: string; chain: ChainNode[]; intensity: number };
 
 export class InvalidLookFileError extends Error {}
 
 /** Same rule as the URL decoder: the file came from outside, so validate the
  *  shape and clamp every value rather than trusting what is in it. */
 export function parseLookFile(text: string): ParsedLookFile {
-  let raw: { kind?: unknown; name?: unknown; params?: unknown; intensity?: unknown };
+  let raw: {
+    kind?: unknown;
+    name?: unknown;
+    chain?: unknown;
+    params?: unknown;
+    intensity?: unknown;
+  };
   try {
     raw = JSON.parse(text);
   } catch {
@@ -178,21 +201,11 @@ export function parseLookFile(text: string): ParsedLookFile {
     throw new InvalidLookFileError('That file is not an Emulsion look.');
   }
 
-  const numbers: Partial<Params> = {};
-  const source = (raw.params ?? {}) as Record<string, unknown>;
-  for (const spec of PARAM_SPECS) {
-    const value = source[spec.key];
-    if (typeof value === 'number') numbers[spec.key] = value;
-  }
-
   return {
     name: typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : 'Imported look',
-    params: clampParams(numbers),
+    chain: readChain(raw.chain, raw.params),
     intensity:
       typeof raw.intensity === 'number' ? Math.min(100, Math.max(0, raw.intensity)) : 100,
   };
 }
 
-export function isNeutral(params: Params): boolean {
-  return PARAM_SPECS.every((spec) => params[spec.key] === DEFAULT_PARAMS[spec.key]);
-}

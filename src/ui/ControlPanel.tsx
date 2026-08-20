@@ -3,26 +3,26 @@ import { Button } from '@astryxdesign/core/Button';
 import { Collapsible } from '@astryxdesign/core/Collapsible';
 import { HStack, LayoutHeader, LayoutPanel, VStack } from '@astryxdesign/core/Layout';
 import { Heading } from '@astryxdesign/core/Heading';
-import { Slider } from '@astryxdesign/core/Slider';
 import { Text } from '@astryxdesign/core/Text';
-import {
-  GROUP_LABELS,
-  PARAM_SPECS,
-  type ParamKey,
-  type ParamSpec,
-  type Params,
-} from '../state/params';
+import { ChainEditor } from './ChainEditor';
 import { Histogram } from './Histogram';
 import { PresetPicker } from './PresetPicker';
+import type { ChainNode } from '../render/effects';
 import type { Preset } from '../state/presets';
 import type { CustomLook } from '../state/persistence';
 import type { Histogram as HistogramData } from '../render/Pipeline';
 
 type Props = {
-  params: Params;
-  onChange: (key: ParamKey, value: number) => void;
-  onReset: () => void;
+  chain: ChainNode[];
   disabled: boolean;
+  isDefault: boolean;
+  onValueChange: (nodeId: string, key: string, value: number) => void;
+  onToggle: (nodeId: string, enabled: boolean) => void;
+  onMove: (nodeId: string, delta: number) => void;
+  onRemove: (nodeId: string) => void;
+  onAdd: (effectId: string) => void;
+  onReset: () => void;
+
   activePresetId: string | null;
   hasDrifted: boolean;
   intensity: number;
@@ -39,17 +39,16 @@ type Props = {
   histogram: HistogramData | null;
 };
 
-const GROUP_ORDER: ParamSpec['group'][] = ['halation', 'grain', 'colour', 'tone'];
-
-/** Halation is the reason this tool exists, so it is the one group that opens
- *  with the panel. Add a group here to have it start expanded. */
-const OPEN_BY_DEFAULT: ParamSpec['group'][] = ['halation'];
-
 export function ControlPanel({
-  params,
-  onChange,
-  onReset,
+  chain,
   disabled,
+  isDefault,
+  onValueChange,
+  onToggle,
+  onMove,
+  onRemove,
+  onAdd,
+  onReset,
   activePresetId,
   hasDrifted,
   intensity,
@@ -65,13 +64,11 @@ export function ControlPanel({
   onImportFile,
   histogram,
 }: Props) {
-  const isDefault = PARAM_SPECS.every((spec) => params[spec.key] === spec.neutral);
-
   return (
-    <LayoutPanel hasDivider padding={0} width={320} isScrollable label="Adjustments">
+    <LayoutPanel hasDivider padding={0} width={320} isScrollable label="Effects">
       <LayoutHeader hasDivider>
         <HStack gap={2} vAlign="center" hAlign="between">
-          <Heading level={2}>Adjustments</Heading>
+          <Heading level={2}>Effects</Heading>
           <Button
             label="Reset"
             variant="ghost"
@@ -112,43 +109,25 @@ export function ControlPanel({
           />
         </Collapsible>
 
-        {GROUP_ORDER.map((group) => {
-          const specs = PARAM_SPECS.filter((spec) => spec.group === group);
-          // A collapsed group must still admit that it is doing something,
-          // otherwise folding the panel away hides state rather than noise.
-          const touched = specs.filter((spec) => params[spec.key] !== spec.neutral).length;
-
-          return (
-            <Collapsible
-              key={group}
-              defaultIsOpen={OPEN_BY_DEFAULT.includes(group)}
-              trigger={
-                <HStack gap={1} vAlign="center">
-                  <Text type="label">{GROUP_LABELS[group]}</Text>
-                  {touched > 0 && <Badge variant="neutral" label={touched} />}
-                </HStack>
-              }
-            >
-              <VStack gap={2} paddingBlock={1}>
-                {specs.map((spec) => (
-                  <Slider
-                    key={spec.key}
-                    label={spec.label}
-                    value={params[spec.key]}
-                    min={spec.min}
-                    max={spec.max}
-                    step={spec.step}
-                    valueDisplay="text"
-                    formatValue={spec.format}
-                    isDisabled={disabled}
-                    onChange={(value: number) => onChange(spec.key, value)}
-                    width="100%"
-                  />
-                ))}
-              </VStack>
-            </Collapsible>
-          );
-        })}
+        <Collapsible
+          defaultIsOpen
+          trigger={
+            <HStack gap={1} vAlign="center">
+              <Text type="label">Chain</Text>
+              <Badge variant="neutral" label={chain.filter((n) => n.enabled).length} />
+            </HStack>
+          }
+        >
+          <ChainEditor
+            chain={chain}
+            disabled={disabled}
+            onValueChange={onValueChange}
+            onToggle={onToggle}
+            onMove={onMove}
+            onRemove={onRemove}
+            onAdd={onAdd}
+          />
+        </Collapsible>
       </VStack>
     </LayoutPanel>
   );

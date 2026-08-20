@@ -9,9 +9,8 @@ import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { Toolbar } from '@astryxdesign/core/Toolbar';
 import * as THREE from 'three';
 import { Pipeline, type Histogram, type RenderView } from '../render/Pipeline';
-import { chainFromLegacyParams } from '../render/effects';
+import type { ChainNode } from '../render/effects';
 import type { LoadedImage } from '../io/image';
-import type { Params } from '../state/params';
 import { PhotoIcon } from './icons';
 
 /** Preview cap. Full resolution is only ever rendered on export — this is what
@@ -33,7 +32,7 @@ const NEUTRAL_SURROUND_LIGHT = '#e8e8e8';
 
 type Props = {
   image: LoadedImage | null;
-  params: Params;
+  chain: ChainNode[];
   intensity: number;
   onPipelineReady: (pipeline: Pipeline) => void;
   onFiles: (files: FileList | null) => void;
@@ -44,7 +43,7 @@ type Props = {
 
 export function Viewport({
   image,
-  params,
+  chain,
   intensity,
   onPipelineReady,
   onFiles,
@@ -167,13 +166,13 @@ export function Viewport({
     const pipeline = pipelineRef.current;
     if (!pipeline || !image || !render.width) return;
     pipeline.setBackground(isDark ? NEUTRAL_SURROUND_DARK : NEUTRAL_SURROUND_LIGHT);
-    pipeline.render(params, render.width, render.height, null, {
+    pipeline.renderChain(chain, render.width, render.height, null, {
       mix: compare ? 0 : intensity / 100,
       view,
       split: isSplit ? 0.5 : -1,
       tilt,
     });
-  }, [image, params, intensity, render, view, compare, isSplit, tilt, isDark]);
+  }, [image, chain, intensity, render, view, compare, isSplit, tilt, isDark]);
 
   // Measured off the main render, and debounced: dragging a slider should not
   // stall on a GPU readback for every intermediate value.
@@ -186,14 +185,11 @@ export function Viewport({
     const id = setTimeout(() => {
       const height = Math.max(1, Math.round((192 * render.height) / render.width));
       onHistogram(
-        pipeline.readHistogram(chainFromLegacyParams(params), 192, height, {
-          mix: intensity / 100,
-          view,
-        }),
+        pipeline.readHistogram(chain, 192, height, { mix: intensity / 100, view }),
       );
     }, 140);
     return () => clearTimeout(id);
-  }, [image, params, intensity, render, view, onHistogram]);
+  }, [image, chain, intensity, render, view, onHistogram]);
 
   /** Zoom at which one image pixel covers one device pixel. */
   const nativeZoom = useMemo(
