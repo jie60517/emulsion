@@ -34,6 +34,8 @@ varying vec2 vScreen;
 uniform sampler2D uSource;
 uniform vec2 uAspect;
 uniform float uSeed;
+/** One pixel, in UV. Neighbour-sampling effects need it to know how far to step. */
+uniform vec2 uTexelSize;
 
 // Where this pixel sits in the photograph rather than on screen. Effects whose
 // scale must follow the picture — grain, vignette — use imageUv() so that
@@ -87,6 +89,7 @@ export function makeMaterial(fragment: string, params: EffectParamSpec[] = []): 
     uSource: { value: null },
     uAspect: { value: new THREE.Vector2(1, 1) },
     uSeed: { value: 0 },
+    uTexelSize: { value: new THREE.Vector2(1 / 1024, 1 / 1024) },
     uViewScale: { value: new THREE.Vector2(1, 1) },
     uViewOffset: { value: new THREE.Vector2(0, 0) },
   };
@@ -110,6 +113,7 @@ export function applyCommon(
   material.uniforms.uSource.value = ctx.input;
   (material.uniforms.uAspect.value as THREE.Vector2).copy(ctx.aspect);
   material.uniforms.uSeed.value = ctx.seed;
+  (material.uniforms.uTexelSize.value as THREE.Vector2).set(1 / ctx.width, 1 / ctx.height);
   (material.uniforms.uViewScale.value as THREE.Vector2).set(ctx.view.scale, ctx.view.scale);
   (material.uniforms.uViewOffset.value as THREE.Vector2).set(ctx.view.offsetX, ctx.view.offsetY);
   for (const spec of params) {

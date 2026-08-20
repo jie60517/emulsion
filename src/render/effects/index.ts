@@ -1,12 +1,47 @@
 import { halation } from './library/halation';
 import { grade, grain, vignette } from './library/basics';
+import { cyanotype, duotone, hueShift, invert, rgbShift, sepia, thermal } from './library/colour';
+import {
+  dither,
+  emboss,
+  halftone,
+  pixelate,
+  posterize,
+  scanlines,
+  sharpen,
+  threshold,
+} from './library/stylise';
 import { defaultValues, type ChainNode, type EffectCategory, type EffectDef } from './types';
 import type { Params } from '../../state/params';
 
 export * from './types';
 export { EffectEngine, simpleEffect } from './engine';
 
-export const EFFECTS: EffectDef[] = [halation, grain, grade, vignette];
+export const EFFECTS: EffectDef[] = [
+  // Film
+  halation,
+  grain,
+  // Colour
+  grade,
+  vignette,
+  sepia,
+  duotone,
+  hueShift,
+  rgbShift,
+  thermal,
+  cyanotype,
+  invert,
+  // Stylise
+  posterize,
+  threshold,
+  halftone,
+  dither,
+  pixelate,
+  emboss,
+  sharpen,
+  // Retro
+  scanlines,
+];
 
 export const REGISTRY: Map<string, EffectDef> = new Map(EFFECTS.map((e) => [e.id, e]));
 
