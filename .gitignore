@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .astryx-ref/
 preview.log
+
+# Personal test photos — never committed; this repo is public.
+public/local-test/

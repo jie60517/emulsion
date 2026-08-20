@@ -66,6 +66,19 @@ uniform sampler2D uHalo4;
 uniform vec3 uWeight[${LEVELS}];
 uniform vec3 uTint;
 uniform float uAmount;
+
+/**
+ * Film has a shoulder. Light added by the halo should compress towards white
+ * rather than stop dead at it, which is why film keeps detail in a bright sky
+ * where a sensor gives back a flat sheet of paper.
+ */
+vec3 shoulder(vec3 x) {
+  const float knee = 0.8;
+  vec3 over = max(x - knee, vec3(0.0));
+  vec3 compressed = knee + (1.0 - knee) * (1.0 - exp(-over / (1.0 - knee)));
+  return mix(x, compressed, step(vec3(knee), x));
+}
+
 void main() {
   // The pyramid was written by a pass that sampled the photograph, so its rows
   // run bottom-up in framebuffer order while imageUv() runs top-down. Read it
@@ -78,8 +91,12 @@ void main() {
   halo += texture2D(uHalo3, uv).rgb * uWeight[3];
   halo += texture2D(uHalo4, uv).rgb * uWeight[4];
 
-  vec3 lin = srgbToLinear(texture2D(uSource, vScreen).rgb) + halo * uTint * uAmount;
-  gl_FragColor = vec4(linearToSrgb(lin), 1.0);
+  vec3 added = halo * uTint * uAmount;
+  vec3 sum = srgbToLinear(texture2D(uSource, vScreen).rgb) + added;
+  // Weighted by how much light the halo actually contributed, so a pixel the
+  // halo never reached comes through untouched.
+  float w = clamp(luma(added) * 4.0, 0.0, 1.0);
+  gl_FragColor = vec4(linearToSrgb(mix(sum, shoulder(sum), w)), 1.0);
 }
 `;
 
