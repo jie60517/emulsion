@@ -1,8 +1,10 @@
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { Collapsible } from '@astryxdesign/core/Collapsible';
+import { Divider } from '@astryxdesign/core/Divider';
 import { HStack, LayoutHeader, LayoutPanel, VStack } from '@astryxdesign/core/Layout';
 import { Heading } from '@astryxdesign/core/Heading';
+import { Slider } from '@astryxdesign/core/Slider';
 import { Text } from '@astryxdesign/core/Text';
 import { ChainEditor } from './ChainEditor';
 import { Histogram } from './Histogram';
@@ -79,11 +81,30 @@ export function ControlPanel({
         </HStack>
       </LayoutHeader>
 
-      <VStack gap={0} padding={2}>
+      <VStack gap={2} padding={2}>
         <Histogram data={histogram} />
 
+        {/* Global, and applies whatever the chain happens to be — so it stays in
+            the open rather than folded inside the looks it started with. */}
+        <Slider
+          label="Intensity"
+          value={intensity}
+          min={0}
+          max={100}
+          step={1}
+          valueDisplay="text"
+          formatValue={(v) => `${Math.round(v)}`}
+          isDisabled={disabled}
+          onChange={(value: number) => onIntensityChange(value)}
+          width="100%"
+        />
+
+        <Divider />
+
+        {/* A starting point rather than a daily control, so it opens closed and
+            keeps eight preset cards out of the way of the chain. */}
         <Collapsible
-          defaultIsOpen
+          defaultIsOpen={false}
           trigger={
             <HStack gap={1} vAlign="center">
               <Text type="label">Looks</Text>
@@ -94,11 +115,9 @@ export function ControlPanel({
           <PresetPicker
             activePresetId={activePresetId}
             hasDrifted={hasDrifted}
-            intensity={intensity}
             disabled={disabled}
             onApply={onApplyPreset}
             onRevert={onRevertPreset}
-            onIntensityChange={onIntensityChange}
             customLooks={customLooks}
             onApplyCustom={onApplyCustom}
             onSaveLook={onSaveLook}
@@ -109,25 +128,17 @@ export function ControlPanel({
           />
         </Collapsible>
 
-        <Collapsible
-          defaultIsOpen
-          trigger={
-            <HStack gap={1} vAlign="center">
-              <Text type="label">Chain</Text>
-              <Badge variant="neutral" label={chain.filter((n) => n.enabled).length} />
-            </HStack>
-          }
-        >
-          <ChainEditor
-            chain={chain}
-            disabled={disabled}
-            onValueChange={onValueChange}
-            onToggle={onToggle}
-            onMove={onMove}
-            onRemove={onRemove}
-            onAdd={onAdd}
-          />
-        </Collapsible>
+        <Divider />
+
+        <ChainEditor
+          chain={chain}
+          disabled={disabled}
+          onValueChange={onValueChange}
+          onToggle={onToggle}
+          onMove={onMove}
+          onRemove={onRemove}
+          onAdd={onAdd}
+        />
       </VStack>
     </LayoutPanel>
   );

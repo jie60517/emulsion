@@ -11,6 +11,7 @@ import {
   sharpen,
   threshold,
 } from './library/stylise';
+import { bloom, blur, motionBlur, starGlow, tiltShift, zoomBlur } from './library/blur';
 import { defaultValues, type ChainNode, type EffectCategory, type EffectDef } from './types';
 import type { Params } from '../../state/params';
 
@@ -39,6 +40,13 @@ export const EFFECTS: EffectDef[] = [
   pixelate,
   emboss,
   sharpen,
+  // Blur
+  blur,
+  bloom,
+  motionBlur,
+  zoomBlur,
+  tiltShift,
+  starGlow,
   // Retro
   scanlines,
 ];

@@ -7,7 +7,6 @@ import { Grid } from '@astryxdesign/core/Grid';
 import { Icon } from '@astryxdesign/core/Icon';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { SelectableCard } from '@astryxdesign/core/SelectableCard';
-import { Slider } from '@astryxdesign/core/Slider';
 import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import {
@@ -21,13 +20,11 @@ import type { CustomLook } from '../state/persistence';
 type Props = {
   activePresetId: string | null;
   hasDrifted: boolean;
-  intensity: number;
   disabled: boolean;
   customLooks: CustomLook[];
   onApply: (preset: Preset) => void;
   onApplyCustom: (look: CustomLook) => void;
   onRevert: () => void;
-  onIntensityChange: (value: number) => void;
   onSaveLook: (name: string) => void;
   onDeleteLook: (look: CustomLook) => void;
   onCopyLink: () => void;
@@ -38,13 +35,11 @@ type Props = {
 export function PresetPicker({
   activePresetId,
   hasDrifted,
-  intensity,
   disabled,
   customLooks,
   onApply,
   onApplyCustom,
   onRevert,
-  onIntensityChange,
   onSaveLook,
   onDeleteLook,
   onCopyLink,
@@ -137,21 +132,6 @@ export function PresetPicker({
           <Button label="Back to preset" variant="ghost" size="sm" onClick={onRevert} />
         </HStack>
       )}
-
-      {/* Blends the finished look back towards the untouched photo, so it stays
-          meaningful after the individual sliders have been edited. */}
-      <Slider
-        label="Intensity"
-        value={intensity}
-        min={0}
-        max={100}
-        step={1}
-        valueDisplay="text"
-        formatValue={(v) => `${Math.round(v)}`}
-        isDisabled={disabled}
-        onChange={(value: number) => onIntensityChange(value)}
-        width="100%"
-      />
 
       <HStack gap={1} vAlign="center" hAlign="between">
         <Button

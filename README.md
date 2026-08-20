@@ -7,11 +7,14 @@ Live: https://jie60517.github.io/emulsion/
 
 ## Status
 
-**Stages 1 and 2 of 4 complete.** Photos load, grade and export at full
-resolution. Eight built-in looks with an intensity blend, custom looks saved to
-the browser, shareable URLs and .json import/export. Zoom to 1:1, pan,
-hold-to-compare, split view, live histogram, and a parallax presentation that
-switches itself off whenever the image is being judged rather than admired.
+**Stages 1 and 2 of 4 complete, and the renderer has since been rebuilt as a
+reorderable effect chain.** Twenty-five effects across film, colour, blur,
+stylise and retro, each one a fragment shader and a parameter list that the
+engine knows nothing about. Photos load, grade and export at full resolution.
+Eight built-in looks with an intensity blend, custom looks saved to the browser,
+shareable URLs and .json import/export. Zoom to 1:1, pan, hold-to-compare, split
+view, live histogram, and a parallax presentation that switches itself off
+whenever the image is being judged rather than admired.
 
 Stage 3 is the video pipeline; stage 4 is batch processing and the mobile
 layout.
